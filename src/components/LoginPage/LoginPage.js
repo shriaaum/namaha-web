@@ -130,8 +130,8 @@ function LoginPage() {
           <h1>{t('auth.welcome')}</h1>
           <p>
             {location.state?.returnTo === '/billing'
-              ? 'Login to complete your puja booking'
-              : 'Enter your mobile to receive OTP'}
+              ? t('auth.subtitleBilling')
+              : t('auth.subtitle')}
           </p>
         </div>
 
@@ -200,7 +200,7 @@ function LoginPage() {
         {step === 3 && (
           <div className="login-form">
             <h3>{t('auth.completeProfile')}</h3>
-            <p>Create your devotee profile to continue</p>
+            <p>{t('auth.profileSubtitle')}</p>
             
             <div className="login-input-group">
               <label>{t('auth.fullName')} *</label>
