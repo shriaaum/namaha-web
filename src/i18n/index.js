@@ -31,7 +31,6 @@ i18n.on('languageChanged', (language) => {
   localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   document.documentElement.lang = language;
   document.documentElement.setAttribute('translate', 'no');
-  document.title = language === 'hi' ? 'श्री आऊम' : language === 'te' ? 'శ్రీ ఆఉమ్' : 'Shri Aaum';
 });
 if (typeof document !== 'undefined') {
   document.documentElement.lang = initialLanguage;
