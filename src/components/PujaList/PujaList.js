@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "./PujaList.css";
 import Footer from "../Footer/Footer";
 import { usePujaList, isPujaUserSoldOut } from "../../data/pujaList";
+import { useTranslation } from 'react-i18next';
 
 const INITIAL_VISIBLE_CARDS = 4;
 const LOAD_MORE_STEP = 4;
@@ -36,6 +37,7 @@ const normalizeBenefitTitles = (benefits) => {
 };
 
 function PujaList() {
+  const { t } = useTranslation();
   const { pujas: pujaList, loading, error } = usePujaList();
   const navigate = useNavigate();
 
@@ -95,7 +97,7 @@ function PujaList() {
       <main className="puja-list-page" aria-busy="true">
         <div className="pl-loading-overlay" role="status" aria-live="polite">
           <div className="pl-loading-spinner" aria-hidden="true" />
-          <div className="pl-loading-text">Loading Divine Pujas…</div>
+          <div className="pl-loading-text">{t('puja.loading')}</div>
         </div>
       </main>
     );
@@ -105,7 +107,7 @@ function PujaList() {
     return (
       <main className="puja-list-page">
         <div className="pl-loading-overlay">
-          <p className="pl-loading-text">Unable to load pujas right now. Please try again later.</p>
+          <p className="pl-loading-text">{t('puja.loadError')}</p>
         </div>
       </main>
     );
@@ -116,10 +118,10 @@ function PujaList() {
       {/* ================= PUJA LIST ================= */}
       <section className="pl-upcoming">
         <h1 className="pl-main-heading">
-          Perform Puja as per Vedic rituals at Famous Hindu Temples in India
+          {t('puja.listTitle')}
         </h1>
         <h2 className="pl-upcoming-title">
-          Upcoming Pujas ({sortedPujas.length})
+          {t('puja.upcoming', { count: sortedPujas.length })}
         </h2>
 
         <div className="pl-cards">
@@ -147,10 +149,10 @@ function PujaList() {
                 )}
                 <div className="pl-card-overlay" />
                 {isPastEvent ? (
-                  <span className="pl-top-choice-tag sold-out">SOLD OUT</span>
+                  <span className="pl-top-choice-tag sold-out">{t('puja.soldOut')}</span>
                 ) : (
                   puja.topChoice && (
-                    <span className="pl-top-choice-tag">TOP CHOICE</span>
+                    <span className="pl-top-choice-tag">{t('puja.topChoice')}</span>
                   )
                 )}
               </div>
@@ -162,9 +164,9 @@ function PujaList() {
                 const titles = normalizeBenefitTitles(puja.benefits).slice(0, 2);
                 if (titles.length === 0) return null;
                 return (
-                  <ul className="pl-card-benefits" aria-label="Benefits">
-                    {titles.map((t, idx) => (
-                      <li key={idx}>{t}</li>
+                  <ul className="pl-card-benefits" aria-label={t('puja.benefits')}>
+                    {titles.map((title, idx) => (
+                      <li key={idx}>{title}</li>
                     ))}
                   </ul>
                 );
@@ -173,15 +175,15 @@ function PujaList() {
               {/* <p className="pl-card-meta">Duration: {puja.duration}</p> */}
               <p className="pl-card-meta">🏛 {puja.templeName}</p>
               {/* occasion: auspicious date/event when puja is performed */}
-              <p className="pl-card-meta pl-card-date">📅 {puja.date}</p>
+              <p className="pl-card-meta pl-card-date">📅 {puja.displayDate || puja.date}</p>
 
               {isPastEvent ? (
                 <div className="pl-card-participate pl-card-participate-disabled">
-                  Booking closed
+                  {t('common.bookingClosed')}
                 </div>
               ) : (
                 <Link to={`/puja/${puja.id}`} className="pl-card-participate">
-                  Book Now <span className="btn-icon">🙏🏻</span>
+                  {t('common.bookNow')} <span className="btn-icon">🙏🏻</span>
                 </Link>
               )}
             </div>

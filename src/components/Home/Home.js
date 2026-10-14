@@ -1,17 +1,41 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../../lib/instance";
+import { useTranslation } from 'react-i18next';
+import { localizeHeroBanner } from "../../i18n/content";
 import "./Home.css";
 
-const TRUST_STRIP_ITEMS = [
-  { id: 1, icon: "shield", text: "Pujas Performed by Qualified Veda Pandits" },
-  { id: 2, icon: "shield", text: "Puja Recordings within 2-4 days" },
-  { id: 3, icon: "shield", text: "Prasad at your Doorstep in 7-10 days" },
-];
-
 function Home() {
+  const { t, i18n } = useTranslation();
+  const trustStripItems = [
+    { id: 1, icon: 'shield', text: t('home.trustPandits') },
+    { id: 2, icon: 'shield', text: t('home.trustRecording') },
+    { id: 3, icon: 'shield', text: t('home.trustPrasad') },
+  ];
   const [activeSlide, setActiveSlide] = useState(0);
-  const [heroSlides, setHeroSlides] = useState([]);
+  const [rawSlides, setRawSlides] = useState([]);
+
+  // Localize at render time so a language switch updates already-loaded banners.
+  const heroSlides = useMemo(
+    () =>
+      rawSlides
+        .map((s) => localizeHeroBanner(s, i18n.language))
+        .map((s, idx) => ({
+          id: String(s.slideId || s.id || s._id || `hero-${idx}`),
+          title: s.title || t('home.heroFallbackTitle'),
+          description: s.subtitle || s.description || "",
+          ctaLabel: s.ctaLabel || t('home.heroFallbackCta'),
+          ctaTo: s.ctaTo || "/",
+          image:
+            s.image ||
+            s.images?.[0]?.url ||
+            s.images?.[0] ||
+            "",
+          imageAlt: s.imageAlt || s.title || t('home.heroFallbackAlt'),
+        }))
+        .filter((s) => s.image),
+    [rawSlides, i18n.language, t]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -43,28 +67,15 @@ function Home() {
           return aTime - bTime; // oldest -> newest
         });
 
-        const mapped = sortedSlides
-          .filter((s) => s && typeof s === "object" && s.isActive === true)
-          .map((s, idx) => ({
-            id: String(s.slideId || s.id || s._id || `hero-${idx}`),
-            title: s.title || "Shri Aaum",
-            description: s.subtitle || s.description || "",
-            ctaLabel: s.ctaLabel || "Explore",
-            ctaTo: s.ctaTo || "/",
-            image:
-              s.image ||
-              s.images?.[0]?.url ||
-              s.images?.[0] ||
-              "",
-            imageAlt: s.imageAlt || s.title || "Hero banner",
-          }))
-          .filter((s) => s.image);
+        const activeSlides = sortedSlides.filter(
+          (s) => s && typeof s === "object" && s.isActive === true
+        );
 
         if (!mounted) return;
-        setHeroSlides(mapped);
+        setRawSlides(activeSlides);
       } catch {
         if (!mounted) return;
-        setHeroSlides([]);
+        setRawSlides([]);
       }
     })();
 
@@ -135,7 +146,7 @@ function Home() {
                       type="button"
                       className={`hero-modern-dot ${index === activeSlide ? "hero-modern-dot-active" : ""}`}
                       onClick={() => setActiveSlide(index)}
-                      aria-label={`Show ${slide.title}`}
+                      aria-label={t('home.showSlide', { title: slide.title })}
                     />
                   ))}
                 </div>
@@ -147,7 +158,7 @@ function Home() {
           <div className="trust-strip-wrap">
             <div className="trust-strip-scroll">
               <div className="trust-strip-inner">
-                {[...TRUST_STRIP_ITEMS, ...TRUST_STRIP_ITEMS].map(
+                {[...trustStripItems, ...trustStripItems].map(
                   (item, index) => (
                     <span key={index} className="trust-strip-item">
                       {item.icon === "shield" && (

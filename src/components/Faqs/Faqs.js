@@ -1,35 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import './Faqs.css';
 
+// Text lives in i18n under faqs.<key>Title / faqs.<key>Desc.
 const benefits = [
-
-  {
-    id: 1,
-    title: 'Celebrate Important Festivals Round The Year',
-    description: 'Be spiritually aligned with every major festival and sacred muhurat. Offer your devotion on the most powerful days of the year from the comfort of your homes.',
-    icon: '🪔',
-  },
-  {
-    id: 2,
-    title: 'Personalised Sankalpa and Sacred Prasad Delivery',
-    description: 'Your names and Gotras are chanted in the Puja Sankalpa, get recorded Puja videos within 2-4 days and Prasad at your doorstep in 7-10 days.',
-    icon: '📦',
-  },
-  {
-    id: 3,
-    title: 'Qualified and Trusted Veda Pandits',
-    description: 'All rituals performed by experienced and devoted Veda Pandits. Authentic procedures as per scriptures and tradition.',
-    icon: '📿',
-  },
-  {
-    id: 4,
-    title: 'Grand Pujas At Affordable Costs',
-    description: 'Participate in grand pujas and rituals without financial burden. We offer divine pujas at affordable costs to make spiritual experiences accessible to all devotees.',
-    icon: '💫',
-  },
+  { id: 1, key: 'festivals', icon: '🪔' },
+  { id: 2, key: 'sankalpa', icon: '📦' },
+  { id: 3, key: 'pandits', icon: '📿' },
+  { id: 4, key: 'affordable', icon: '💫' },
 ];
 
 function Faqs() {
+  const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
@@ -51,7 +33,7 @@ function Faqs() {
     <section className="faq-section">
       <div className="faq-container">
         <h2 className="faq-heading">
-          Benefits of Conducting Pujas With Shri AAUM
+          {t('faqs.heading')}
         </h2>
        
         <div className="faq-carousel">
@@ -80,8 +62,8 @@ function Faqs() {
               >
                 <div className="faq-benefit-card">
                   <span className="faq-benefit-icon" aria-hidden="true">{item.icon}</span>
-                  <h3 className="faq-benefit-title">{item.title}</h3>
-                  <p className="faq-benefit-desc">{item.description}</p>
+                  <h3 className="faq-benefit-title">{t(`faqs.${item.key}Title`)}</h3>
+                  <p className="faq-benefit-desc">{t(`faqs.${item.key}Desc`)}</p>
                 </div>
               </div>
             ))}
@@ -94,7 +76,7 @@ function Faqs() {
                 type="button"
                 className={`faq-dot ${index === activeIndex ? 'active' : ''}`}
                 onClick={() => goToSlide(index)}
-                aria-label={`Go to slide ${index + 1}`}
+                aria-label={t('faqs.goToSlide', { number: index + 1 })}
                 aria-current={index === activeIndex}
               />
             ))}

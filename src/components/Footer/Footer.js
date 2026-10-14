@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './Footer.css';
 
 const socialIcons = {
@@ -25,13 +26,14 @@ const socialIcons = {
 };
 
 function Footer() {
+    const { t } = useTranslation();
     const companyLinks = [
-        { label: 'About Us', href: '/about' },
-        { label: 'Contact Us', href: '/contact' },
+        { label: t('footer.aboutUs'), href: '/about' },
+        { label: t('footer.contactUs'), href: '/contact' },
     ];
     const serviceLinks = [
-        { label: 'Puja', href: '/puja' },
-        { label: 'Chadhava', href: '/chadhava' },
+        { label: t('footer.puja'), href: '/puja' },
+        { label: t('footer.chadhava'), href: '/chadhava' },
     ];
     const socialLinks = [
         { name: 'YouTube', href: 'https://youtube.com/@shri_aaum?si=5kOi-XTTaETP85jK' },
@@ -41,37 +43,37 @@ function Footer() {
     ];
 
     return (
-        <footer className="footer" aria-label="Site footer">
+        <footer className="footer" aria-label={t('footer.ariaLabel')}>
             <div className="footer-container">
                 <div className="footer-top">
                     <div className="footer-col footer-brand">
                         <div className="footer-logo-wrap">
-                            <img src="/logo.png" alt="Shri AAUM" className="footer-logo" />
-                            <span className="footer-brand-name">SHRI AAUM</span>
+                            <img src="/logo.png" alt={t('footer.logoAlt')} className="footer-logo" />
+                            <span className="footer-brand-name">{t('footer.brandName')}</span>
                         </div>
                         <div className="footer-desc">
-                            <p>Shri embodies divine abundance, grace, prosperity, and the auspicious flow of life.</p>
-                            <p>Aaum (Om) is the primordial cosmic vibration — the eternal sound from which all creation unfolds.</p>
-                            <p>Together, Shri Aaum signifies the conscious invitation of divine order into one's life.</p>
-                            <p>Our purpose is to preserve sacred traditions with authenticity, structure them with clarity, and make their power accessible to all.</p>
-                            <p>Temple. Teerth. Tattva. Within your reach.</p>
+                            <p>{t('footer.desc1')}</p>
+                            <p>{t('footer.desc2')}</p>
+                            <p>{t('footer.desc3')}</p>
+                            <p>{t('footer.desc4')}</p>
+                            <p>{t('footer.desc5')}</p>
                         </div>
                     </div>
-                    <nav className="footer-col" aria-label="Company">
-                        <h4 className="footer-heading">Company</h4>
+                    <nav className="footer-col" aria-label={t('footer.company')}>
+                        <h4 className="footer-heading">{t('footer.company')}</h4>
                         <ul className="footer-links">
                             {companyLinks.map((link) => (
-                                <li key={link.label}>
+                                <li key={link.href}>
                                     <Link to={link.href}>{link.label}</Link>
                                 </li>
                             ))}
                         </ul>
                     </nav>
-                    <nav className="footer-col" aria-label="Services">
-                        <h4 className="footer-heading">Our Services</h4>
+                    <nav className="footer-col" aria-label={t('footer.services')}>
+                        <h4 className="footer-heading">{t('footer.services')}</h4>
                         <ul className="footer-links">
                             {serviceLinks.map((link) => (
-                                <li key={link.label}>
+                                <li key={link.href}>
                                     {link.href ? (
                                         <Link to={link.href}>{link.label}</Link>
                                     ) : (
@@ -82,11 +84,11 @@ function Footer() {
                         </ul>
                     </nav>
                     <div className="footer-col footer-address-col">
-                        <h4 className="footer-heading">Our Address</h4>
+                        <h4 className="footer-heading">{t('footer.ourAddress')}</h4>
                         <p className="footer-address">
-                            F.No.703, 7th Flr, Block-B, SVC Tree Walk,<br />
-                            Kondapur, Kondapur, Serilingampally,<br />
-                            K.V.Rangareddy, Telangana - 500084.
+                            {t('address.line1')}<br />
+                            {t('address.line2')}<br />
+                            {t('address.line3')}.
                         </p>
                         <div className="footer-social">
                             {socialLinks.map((s) => (

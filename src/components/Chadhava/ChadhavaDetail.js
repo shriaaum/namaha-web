@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
 import { normalizeApiSoldTag, isPujaUserSoldOut, getEventDateTimeRawInIST } from '../../data/pujaList';
+import { useTranslation } from 'react-i18next';
+import { localizeChadhava } from '../../i18n/cmsText';
+import { getDateLocale } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
 
@@ -102,54 +105,20 @@ const getRatingAvatars = (id, count = 4) => {
 };
 // ---
 
-const FAQS = [
-  {
-    question: 'What is Chadhava and how does it benefit devotees?',
-    answer:
-      'Chadhava is a sacred offering made with devotion at the temple during puja. It helps devotees express sankalp, seek blessings, and spiritually participate in temple rituals even if they are not physically present.',
-  },
-  {
-    question: 'Can I offer multiple Chadhava items in a single booking?',
-    answer:
-      'Yes. You can select multiple offering items and quantities in one booking. Your total amount is calculated automatically before payment.',
-  },
-  {
-    question: 'How will I know that my Chadhava has been offered?',
-    answer:
-      'After successful booking, your order is recorded in your account. You can track status updates from your booking details and contact support if you need confirmation.',
-  },
-  {
-    question: 'Can I book Chadhava for a specific date or occasion?',
-    answer:
-      'Yes. If a specific event date is available for the selected Chadhava, your offering is scheduled accordingly. Please book before the event cut-off time for timely inclusion.',
-  },
-  {
-    question: 'Can I book Chadhava on behalf of my family members?',
-    answer:
-      'Yes, you can book on behalf of family members or loved ones. Please make sure the sankalp details shared during booking are correct.',
-  },
-  {
-    question: 'What happens if I miss the event date after booking?',
-    answer:
-      'If your payment is successful before the cut-off, your Chadhava is usually processed for that event. For edge cases or delays, please connect with support to verify the final status.',
-  },
-  {
-    question: 'Whom should I contact for Chadhava booking support?',
-    answer:
-      'For any issue related to booking, payment, or status, please use the contact options available in the app/site support section. Our team will assist you promptly.',
-  },
-];
+// FAQ text lives in i18n: chadhavaDetail.faq{n}q / chadhavaDetail.faq{n}a
+const FAQ_NUMBERS = [1, 2, 3, 4, 5, 6, 7];
 
 const SECTION_TABS = [
-  { id: 'packages', label: 'Packages' },
-  { id: 'benefits', label: 'Benefits' },
-  { id: 'temple', label: 'Temple Details' },
-  { id: 'faqs', label: 'FAQs' },
+  { id: 'packages', labelKey: 'detailTabs.packages' },
+  { id: 'benefits', labelKey: 'detailTabs.benefits' },
+  { id: 'temple', labelKey: 'detailTabs.temple' },
+  { id: 'faqs', labelKey: 'detailTabs.faqs' },
 ];
 
 function ChadhavaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [activeFaq, setActiveFaq] = useState(null);
   const [cart, setCart] = useState({});
   const [loading, setLoading] = useState(true);
@@ -165,11 +134,12 @@ function ChadhavaDetail() {
   const [aboutVisibleLines, setAboutVisibleLines] = useState(collapsedLines);
   const [aboutHasOverflow, setAboutHasOverflow] = useState(false);
 
-  const formatEventDate = (value) => {
-    if (!value) return 'Date will be announced';
+  // locale defaults to en-GB: the billing/booking payload keeps the English date.
+  const formatEventDate = (value, locale = 'en-GB') => {
+    if (!value) return locale === 'en-GB' ? 'Date will be announced' : t('chadhava.dateAnnounced');
     const d = new Date(value);
     if (!Number.isNaN(d.getTime())) {
-      return d.toLocaleDateString('en-GB', {
+      return d.toLocaleDateString(locale, {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -188,8 +158,16 @@ function ChadhavaDetail() {
     return { isBookingBlocked: isPujaUserSoldOut(ctx) };
   }, [detail]);
 
+  // Localized copy of the record for display; `detail`/`offerings` stay raw (English).
+  const view = useMemo(() => localizeChadhava(detail, i18n.language), [detail, i18n.language]);
+  const viewOfferings = useMemo(
+    () => (Array.isArray(view?.offerings) ? view.offerings : offerings),
+    [view, offerings]
+  );
+  const displayDate = (value) => formatEventDate(value, getDateLocale(i18n.language));
+
   const normalizedBenefits = useMemo(() => {
-    const raw = detail?.benefits;
+    const raw = view?.benefits;
     if (!Array.isArray(raw)) return [];
     return raw
       .map((item) => {
@@ -200,10 +178,10 @@ function ChadhavaDetail() {
         return { title, subtitle };
       })
       .filter(Boolean);
-  }, [detail]);
+  }, [view]);
 
-  const templeName = detail?.templeName || 'Shri Aaum Temple';
-  const templeDescription = detail?.templeDescription || '';
+  const templeName = view?.templeName || t('chadhavaDetail.defaultTemple');
+  const templeDescription = view?.templeDescription || '';
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -347,6 +325,7 @@ function ChadhavaDetail() {
         const price = Number(offering.price || 0);
         return {
           id: offering._id || offering.id || offeringId,
+          // English (raw) name is saved in the booking; BillingPage translates it for display.
           name: offering.title || 'Offering',
           price,
           quantity: qty,
@@ -392,7 +371,7 @@ function ChadhavaDetail() {
     return (
       <main className="chd-page">
         <div className="chd-not-found">
-          <p>Loading chadhava details...</p>
+          <p>{t('chadhava.detailsLoading')}</p>
         </div>
       </main>
     );
@@ -402,9 +381,9 @@ function ChadhavaDetail() {
     return (
       <main className="chd-page">
         <div className="chd-not-found">
-          <p>Chadhava not found.</p>
+          <p>{t('chadhava.notFound')}</p>
           <button type="button" onClick={() => navigate('/chadhava')}>
-            Back to Chadhava list
+            {t('chadhava.backToList')}
           </button>
         </div>
       </main>
@@ -424,7 +403,7 @@ function ChadhavaDetail() {
                     {detail.bannerImage ? (
                       <img
                         src={detail.bannerImage}
-                        alt={detail.title || 'Chadhava'}
+                        alt={view.title || t('nav.chadhava')}
                         className="chd-hero-image"
                         loading="eager"
                         decoding="async"
@@ -433,16 +412,16 @@ function ChadhavaDetail() {
                       <div className="chd-hero-image chd-hero-image-fallback" />
                     )}
                     {isBookingBlocked ? (
-                      <span className="chd-sold-out-tag">SOLD OUT</span>
+                      <span className="chd-sold-out-tag">{t('puja.soldOut')}</span>
                     ) : null}
                   </div>
                 </div>
               </div>
               <div className="chd-hero-text">
                 <div className="chd-details-header">
-                  <h1 className="chd-title">{detail.title}</h1>
+                  <h1 className="chd-title">{view.title}</h1>
                   <p className="chd-subtitle">
-                    {detail.subtitle || 'Offer this sacred chadhava for divine blessings.'}
+                    {view.subtitle || t('chadhavaDetail.defaultSubtitle')}
                   </p>
                   <p className="chd-meta">
                     <span className="chd-meta-icon">🏛</span>
@@ -450,10 +429,10 @@ function ChadhavaDetail() {
                   </p>
                   <p className="chd-meta">
                     <span className="chd-meta-icon">📅</span>
-                    {formatEventDate(detail.eventdate || detail.eventDate || detail.dateRange)}
+                    {displayDate(detail.eventdate || detail.eventDate || detail.dateRange)}
                   </p>
                 </div>
-                {detail?.description ? (
+                {view?.description ? (
                   <div className="chd-details-about">
                     <div
                       className="chd-details-about-text"
@@ -463,7 +442,7 @@ function ChadhavaDetail() {
                       }}
                       ref={aboutTextRef}
                     >
-                      {renderRichText(detail.description)}
+                      {renderRichText(view.description)}
                     </div>
                     <div className="chd-details-about-actions">
                       {aboutVisibleLines <= collapsedLines && aboutHasOverflow ? (
@@ -472,7 +451,7 @@ function ChadhavaDetail() {
                           className="chd-read-more-btn"
                           onClick={() => setAboutVisibleLines(999)}
                         >
-                          Read more
+                          {t('common.readMore')}
                         </button>
                       ) : null}
                       {aboutVisibleLines > collapsedLines ? (
@@ -481,15 +460,16 @@ function ChadhavaDetail() {
                           className="chd-read-more-btn chd-read-less"
                           onClick={() => setAboutVisibleLines(collapsedLines)}
                         >
-                          Read less
+                          {t('common.readLess')}
                         </button>
                       ) : null}
                     </div>
                   </div>
                 ) : null}
                 <p className="chd-devotees">
-                  Till now <strong>{detail.devoteesCount || 'many'} Devotees</strong> have participated in
-                  Chadhava.
+                  {t('chadhavaDetail.devoteesBefore')}{' '}
+                  <strong>{t('chadhavaDetail.devoteesCount', { count: detail.devoteesCount || t('chadhavaDetail.many') })}</strong>{' '}
+                  {t('chadhavaDetail.devoteesAfter')}
                 </p>
                 {(() => {
                   const itemId = detail?._id || detail?.id || id;
@@ -499,7 +479,7 @@ function ChadhavaDetail() {
                   const fullStars = Math.floor(rating);
                   const hasHalf = rating - fullStars >= 0.3;
                   return (
-                    <div className="chd-rating-row" aria-label={`Rating: ${rating} out of 5 stars`}>
+                    <div className="chd-rating-row" aria-label={t('detailCommon.ratingAria', { rating })}>
                       <div className="chd-rating-avatars">
                         {avatars.map((av, i) => (
                           <img key={i} src={av.src} alt="" aria-hidden="true" className="chd-rating-avatar" />
@@ -519,7 +499,7 @@ function ChadhavaDetail() {
                           ))}
                         </span>
                         <span className="chd-rating-score">{rating.toFixed(1)}</span>
-                        <span className="chd-rating-count">({reviewCount} ratings)</span>
+                        <span className="chd-rating-count">{t('detailCommon.ratingsCount', { count: reviewCount })}</span>
                       </div>
                     </div>
                   );
@@ -540,7 +520,7 @@ function ChadhavaDetail() {
                   className={`chd-section-tab ${activeTab === tab.id ? 'active' : ''}`}
                   onClick={() => scrollToSection(tab.id)}
                 >
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </button>
               ))}
             </div>
@@ -555,20 +535,20 @@ function ChadhavaDetail() {
               sectionRefs.current.packages = el;
             }}
           >
-            <h2 className="chd-section-title">Choose an offering</h2>
+            <h2 className="chd-section-title">{t('chadhava.chooseOffering')}</h2>
             {isBookingBlocked ? (
               <p className="chd-booking-closed-banner" role="status">
-                <strong>Booking closed.</strong> This chadhava is not available for booking.
+                <strong>{t('detailCommon.bookingClosedStrong')}</strong> {t('chadhavaDetail.notAvailable')}
               </p>
             ) : null}
             <div className="chd-offering-list">
-              {offerings.map((offering, index) => {
+              {viewOfferings.map((offering, index) => {
                 const offeringId = offering._id || offering.id || index;
                 const count = cart[offeringId] || 0;
                 return (
                   <div key={offeringId} className="chd-offering-row">
                     <div className="chd-offering-main">
-                      <p className="chd-offering-label">{offering.special ? 'Special Offering' : 'Offering'}</p>
+                      <p className="chd-offering-label">{offering.special ? t('chadhavaDetail.specialOffering') : t('chadhavaDetail.offering')}</p>
                       <h3 className="chd-offering-title">{offering.title}</h3>
                       {offering.description && <p className="chd-offering-meta">{offering.description}</p>}
                       <p className="chd-offering-price">₹{Number(offering.price || 0).toLocaleString('en-IN')}</p>
@@ -608,7 +588,7 @@ function ChadhavaDetail() {
                             disabled={isBookingBlocked}
                             onClick={() => updateCart(offeringId, 1)}
                           >
-                            + Add
+                            {t('chadhava.add')}
                           </button>
                         )}
                       </div>
@@ -618,7 +598,7 @@ function ChadhavaDetail() {
               })}
             </div>
             {offerings.length === 0 && (
-              <p className="chd-faq-answer">No offerings available for this chadhava yet.</p>
+              <p className="chd-faq-answer">{t('chadhava.noOfferings')}</p>
             )}
           </section>
 
@@ -629,7 +609,7 @@ function ChadhavaDetail() {
               sectionRefs.current.benefits = el;
             }}
           >
-            <h2 className="chd-section-title">Benefits</h2>
+            <h2 className="chd-section-title">{t('detailTabs.benefits')}</h2>
             {normalizedBenefits.length > 0 ? (
               <ul className="chd-benefits-grid">
                 {normalizedBenefits.map((benefit, idx) => (
@@ -643,7 +623,7 @@ function ChadhavaDetail() {
                 ))}
               </ul>
             ) : (
-              <p className="chd-empty-block">Benefits will be announced soon.</p>
+              <p className="chd-empty-block">{t('chadhavaDetail.benefitsSoon')}</p>
             )}
           </section>
 
@@ -654,14 +634,14 @@ function ChadhavaDetail() {
               sectionRefs.current.temple = el;
             }}
           >
-            <h2 className="chd-section-title">Temple Details</h2>
+            <h2 className="chd-section-title">{t('detailTabs.temple')}</h2>
             {templeDescription ? (
               <div className="chd-temple-block">
                 <h3 className="chd-temple-name">{templeName}</h3>
                 <div className="chd-temple-text">{renderRichText(templeDescription)}</div>
               </div>
             ) : (
-              <p className="chd-empty-block">Temple details will be updated soon.</p>
+              <p className="chd-empty-block">{t('chadhavaDetail.templeSoon')}</p>
             )}
           </section>
 
@@ -673,23 +653,23 @@ function ChadhavaDetail() {
               sectionRefs.current.faqs = el;
             }}
           >
-            <h2 className="chd-section-title">Frequently asked Questions</h2>
+            <h2 className="chd-section-title">{t('detailCommon.faqTitle')}</h2>
             <ul className="chd-faq-list">
-              {FAQS.map((faq, index) => (
-                <li key={faq.question} className="chd-faq-item">
+              {FAQ_NUMBERS.map((n, index) => (
+                <li key={n} className="chd-faq-item">
                   <button
                     type="button"
                     className="chd-faq-question"
                     onClick={() => setActiveFaq(activeFaq === index ? null : index)}
                   >
-                    {faq.question}
+                    {t(`chadhavaDetail.faq${n}q`)}
                     <span className="chd-faq-chevron">
                       {activeFaq === index ? '▲' : '▼'}
                     </span>
                   </button>
                   {activeFaq === index && (
                     <p className="chd-faq-answer">
-                      {faq.answer}
+                      {t(`chadhavaDetail.faq${n}a`)}
                     </p>
                   )}
                 </li>
@@ -704,11 +684,11 @@ function ChadhavaDetail() {
       {!isBookingBlocked && getTotalItems() > 0 && (
         <div className="chd-cart-button">
           <div className="chd-cart-info">
-            <span className="chd-cart-items">{getTotalItems()} items</span>
-            <span className="chd-cart-total">₹{getTotalPrice().toLocaleString()}</span>
+            <span className="chd-cart-items">{t('chadhava.items', { count: getTotalItems() })}</span>
+            <span className="chd-cart-total">₹{getTotalPrice().toLocaleString('en-IN')}</span>
           </div>
           <button type="button" className="chd-cart-cta" onClick={handleBuyNow}>
-            Buy Now
+            {t('chadhava.buyNow')}
           </button>
         </div>
       )}

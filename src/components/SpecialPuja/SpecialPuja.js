@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./SpecialPuja.css";
 import "../PujaList/PujaList.css";
 import {
-  fetchPujaList,
+  usePujaList,
   PUJA_LIST_GRID_COLUMNS,
   isPujaUserSoldOut,
 } from "../../data/pujaList";
+import { useTranslation } from 'react-i18next';
 
 /** Same as PujaList: trust API-mapped `isPastEvent` when boolean; else policy + date via `isPujaUserSoldOut`. */
 const isPujaPastEvent = (puja) =>
@@ -34,8 +35,9 @@ const sortByAvailabilityThenDate = (a, b) => {
 };
 
 function SpecialPuja() {
-  const [pujas, setPujas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
+  // usePujaList re-maps already-fetched records on language change.
+  const { pujas: apiPujas, loading, error } = usePujaList();
   const navigate = useNavigate();
 
   const getBenefitTitle = (benefit) => {
@@ -45,28 +47,23 @@ function SpecialPuja() {
     return null;
   };
 
-  // ✅ NEW: Fetch API data
-  useEffect(() => {
-    fetchPujaList()
-      .then((apiPujas) => {
-        // Map API data to SpecialPuja format
-        const specialPujas = apiPujas
-          .map((p) => ({
-            ...p,
-            imageClass:
-              SP_IMAGE_MAP[p.id] ||
-              p.imageClass ||
-              `sp-banner-${Math.floor(Math.random() * 3) + 1}`,
-          }))
-          .sort(sortByAvailabilityThenDate);
-        setPujas(specialPujas.slice(0, PUJA_LIST_GRID_COLUMNS));
-      })
-      .catch((err) => {
-        console.error("❌ SpecialPuja fetch failed:", err);
-        setPujas([]);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  // Map API data to SpecialPuja format
+  const pujas = useMemo(
+    () =>
+      apiPujas
+        .map((p) => ({
+          ...p,
+          imageClass:
+            SP_IMAGE_MAP[p.id] ||
+            p.imageClass ||
+            `sp-banner-${Math.floor(Math.random() * 3) + 1}`,
+        }))
+        .sort(sortByAvailabilityThenDate)
+        .slice(0, PUJA_LIST_GRID_COLUMNS),
+    [apiPujas]
+  );
+
+  if (error) console.error("❌ SpecialPuja fetch failed:", error);
 
   if (loading) {
     return (
@@ -74,7 +71,7 @@ function SpecialPuja() {
         <div className="sp-container">
           <div className="pl-loading-overlay" role="status" aria-live="polite">
             <div className="pl-loading-spinner" aria-hidden="true" />
-            <div className="pl-loading-text">Loading…</div>
+            <div className="pl-loading-text">{t('common.loading')}</div>
           </div>
         </div>
       </section>
@@ -86,14 +83,10 @@ function SpecialPuja() {
       <div className="sp-container">
         <div className="sp-header">
           <h2>
-            <span className="sp-title-purple">Join Sacred Pujas</span> From
-            Anywhere
+            <span className="sp-title-purple">{t('home.joinSacred')}</span>{' '}{t('home.fromAnywhere')}
           </h2>
           <p className="sp-subtitle">
-            Deepen your spiritual journey by offering sacred pujas at India’s
-            most revered Teerth Kshetras. Get your family’s names and gotras
-            chanted in Pujas performed by qualified Veda Pandits to attain peace
-            and protection for your family.
+            {t('home.specialDescription')}
           </p>
         </div>
 
@@ -120,10 +113,10 @@ function SpecialPuja() {
                 )}
                 <div className="pl-card-overlay" />
                 {isPujaPastEvent(puja) ? (
-                  <span className="pl-top-choice-tag sold-out">SOLD OUT</span>
+                  <span className="pl-top-choice-tag sold-out">{t('puja.soldOut')}</span>
                 ) : (
                   puja.topChoice && (
-                    <span className="pl-top-choice-tag">TOP CHOICE</span>
+                    <span className="pl-top-choice-tag">{t('puja.topChoice')}</span>
                   )
                 )}
               </div>
@@ -132,7 +125,7 @@ function SpecialPuja() {
               <h3 className="pl-card-title">{puja.title}</h3>
 
               {Array.isArray(puja.benefits) && puja.benefits.length > 0 && (
-                <ul className="pl-card-benefits" aria-label="Benefits">
+                <ul className="pl-card-benefits" aria-label={t('puja.benefits')}>
                   {puja.benefits
                     .map(getBenefitTitle)
                     .filter(Boolean)
@@ -147,14 +140,14 @@ function SpecialPuja() {
               {/* templeName: temple/venue where puja is performed */}
               <p className="pl-card-meta">🏛 {puja.templeName}</p>
               {/* occasion: auspicious date/event when puja is performed */}
-              <p className="pl-card-meta pl-card-date">📅 {puja.date}</p>
+              <p className="pl-card-meta pl-card-date">📅 {puja.displayDate || puja.date}</p>
               {isPujaPastEvent(puja) ? (
                 <div className="pl-card-participate pl-card-participate-disabled">
-                  Booking closed
+                  {t('common.bookingClosed')}
                 </div>
               ) : (
                 <Link to={`/puja/${puja.id}`} className="pl-card-participate">
-                  Book Now <span className="btn-icon">🙏🏻</span>
+                  {t('common.bookNow')} <span className="btn-icon">🙏🏻</span>
                 </Link>
               )}
             </div>
@@ -163,7 +156,7 @@ function SpecialPuja() {
 
         <div className="sp-footer">
           <Link to="/puja" className="sp-view-all">
-            View All Pujas →
+            {t('home.viewAllPujas')} →
           </Link>
         </div>
       </div>

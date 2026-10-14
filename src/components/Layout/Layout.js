@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../LanguageSelector/LanguageSelector';
 import './Layout.css';
 
 const HomeIcon = () => (
@@ -74,6 +76,7 @@ const BookingsIcon = () => (
 );
 
 function Layout({ children }) {
+    const { t } = useTranslation();
     const [isScrolled, setIsScrolled] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
@@ -210,10 +213,10 @@ function Layout({ children }) {
     const SHOW_PROFILE_MENU = true; // Show profile dropdown when logged in
 
     const mobileNavItems = [
-        { path: '/', label: 'Home', icon: 'home' },
-        { path: '/puja', label: 'Puja', icon: 'puja' },
-        { path: '/chadhava', label: 'Chadhava', icon: 'chadhava' },
-        { path: '/my-bookings', label: 'Bookings', icon: 'bookings', requiresAuth: true },
+        { path: '/', label: t('nav.home'), icon: 'home' },
+        { path: '/puja', label: t('nav.puja'), icon: 'puja' },
+        { path: '/chadhava', label: t('nav.chadhava'), icon: 'chadhava' },
+        { path: '/my-bookings', label: t('nav.bookings'), icon: 'bookings', requiresAuth: true },
     ];
 
     const isPujaDetailPage = /^\/puja\/.+/.test(location.pathname);
@@ -247,7 +250,7 @@ function Layout({ children }) {
                                 className={location.pathname === '/' ? 'active' : ''}
                                 onClick={() => { window.scrollTo({ top: 0, behavior: 'instant' }); closeMenu(); }}
                             >
-                                Home
+                                {t('nav.home')}
                             </Link>
                         </li>
                         <li>
@@ -256,7 +259,7 @@ function Layout({ children }) {
                                 className={isPathActive('/puja') ? 'active' : ''}
                                 onClick={() => { window.scrollTo({ top: 0, behavior: 'instant' }); closeMenu(); }}
                             >
-                                Puja
+                                {t('nav.puja')}
                             </NavLink>
                         </li>
                         <li>
@@ -265,7 +268,7 @@ function Layout({ children }) {
                                 className={isPathActive('/chadhava') ? 'active' : ''}
                                 onClick={() => { window.scrollTo({ top: 0, behavior: 'instant' }); closeMenu(); }}
                             >
-                                Chadhava
+                                {t('nav.chadhava')}
                             </NavLink>
                         </li>
                         <li>
@@ -274,7 +277,7 @@ function Layout({ children }) {
                                 className={location.pathname === '/about' ? 'active' : ''}
                                 onClick={() => { window.scrollTo({ top: 0, behavior: 'instant' }); closeMenu(); }}
                             >
-                                About
+                                {t('nav.about')}
                             </Link>
                         </li>
                         <li>
@@ -283,7 +286,7 @@ function Layout({ children }) {
                                 className={location.pathname === '/contact' ? 'active' : ''}
                                 onClick={() => { window.scrollTo({ top: 0, behavior: 'instant' }); closeMenu(); }}
                             >
-                                Contact
+                                {t('nav.contact')}
                             </Link>
                         </li>
                         <li>
@@ -293,12 +296,13 @@ function Layout({ children }) {
                                 rel="noopener noreferrer"
                                 onClick={closeMenu}
                             >
-                                Store
+                                {t('nav.store')}
                             </a>
                         </li>
                         {/* <li><a href="#library" onClick={closeMenu}>Library</a></li> */}
                     </ul>
                     <div className="nav-right">
+                        <LanguageSelector />
                         {/* Profile icon always visible; dropdown only when logged in */}
                         <div className="profile-container">
                             <button
@@ -311,7 +315,7 @@ function Layout({ children }) {
                                         setProfileOpen(!profileOpen);
                                     }
                                 }}
-                                aria-label="User profile"
+                                aria-label={t('nav.profile')}
                             >
                                 {user?.profileImageUrl ? (
                                     <img
@@ -344,7 +348,7 @@ function Layout({ children }) {
                                         <div className="profile-menu">
                                             <Link to="/my-bookings" className="profile-item profile-item-my-bookings" onClick={() => setProfileOpen(false)}>
                                                 <div className="profile-icon">🕉</div>
-                                                <span>My Puja Bookings</span>
+                                                <span>{t('nav.myBookings')}</span>
                                                 <div className="profile-chevron">›</div>
                                             </Link>
 
@@ -378,7 +382,7 @@ function Layout({ children }) {
                                                 onClick={handleLogout}
                                             >
                                                 <div className="profile-icon">🚪</div>
-                                                <span>Logout</span>
+                                                <span>{t('nav.logout')}</span>
                                                 <div className="profile-chevron">›</div>
                                             </button>
                                         </div>
@@ -414,7 +418,7 @@ function Layout({ children }) {
             <main className="layout-main">{children}</main>
 
             {!isPujaDetailPage && !isBillingPage && (
-            <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+            <nav className="mobile-bottom-nav" aria-label={t('nav.mobileNavigation')}>
                 {mobileNavItems.map((item) => {
                     const active = isPathActive(item.path);
                     return (

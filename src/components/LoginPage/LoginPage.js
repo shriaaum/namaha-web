@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
+import { useTranslation } from 'react-i18next';
 import './LoginPage.css';
 
 function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -21,7 +23,7 @@ function LoginPage() {
   // Send OTP
   const sendOtp = async () => {
     if (!mobile || mobile.length !== 10) {
-      setError('Enter valid 10-digit mobile');
+      setError(t('auth.invalidMobile'));
       return;
     }
 
@@ -32,10 +34,10 @@ function LoginPage() {
       
       if (res.data.success) {
         setStep(2);
-        setError('OTP sent successfully!');
+        setError(t('auth.otpSentSuccess'));
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send OTP');
+      setError(err.response?.data?.message || t('auth.sendOtpFailed'));
     } finally {
       setLoading(false);
     }
@@ -44,7 +46,7 @@ function LoginPage() {
   // Verify OTP
   const verifyOtp = async () => {
     if (!otp || otp.length !== 6) {
-      setError('Enter valid 6-digit OTP');
+      setError(t('auth.invalidOtp'));
       return;
     }
 
@@ -79,7 +81,7 @@ function LoginPage() {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid OTP');
+      setError(err.response?.data?.message || t('auth.invalidOtpMessage'));
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,7 @@ function LoginPage() {
   // Complete Profile
   const completeProfile = async () => {
     if (!name || !token) { 
-      setError('Please enter your name');
+      setError(t('auth.nameRequired'));
       return;
     }
 
@@ -113,7 +115,7 @@ function LoginPage() {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Profile update failed');
+      setError(err.response?.data?.message || t('auth.profileUpdateFailed'));
       console.error('❌ Error:', err.response?.data);
     } finally {
       setLoading(false);
@@ -125,7 +127,7 @@ function LoginPage() {
       <div className="login-container">
         <div className="login-header">
           <img src="/logo.png" alt="Shri AAUM" className="login-logo" />
-          <h1>Welcome Back</h1>
+          <h1>{t('auth.welcome')}</h1>
           <p>
             {location.state?.returnTo === '/billing'
               ? 'Login to complete your puja booking'
@@ -141,7 +143,7 @@ function LoginPage() {
         {step === 1 && (
           <div className="login-form">
             <div className="login-input-group">
-              <label>Mobile Number</label>
+              <label>{t('auth.mobile')}</label>
               <div className="login-phone-input">
                 <span>{countryCode}</span>
                 <input
@@ -149,7 +151,7 @@ function LoginPage() {
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   onKeyDown={(e) => { if (e.key === 'Enter') sendOtp(); }}
-                  placeholder="Enter 10-digit mobile"
+                  placeholder={t('auth.mobilePlaceholder')}
                   maxLength={10}
                 />
               </div>
@@ -159,7 +161,7 @@ function LoginPage() {
               onClick={sendOtp}
               disabled={loading}
             >
-              {loading ? 'Sending...' : 'Send OTP'}
+              {loading ? t('common.loading') : t('auth.sendOtp')}
             </button>
           </div>
         )}
@@ -168,13 +170,13 @@ function LoginPage() {
         {step === 2 && (
           <div className="login-form">
             <div className="login-otp-header">
-              <p>OTP sent to <strong>{mobile}</strong></p>
+              <p>{t('auth.otpSent', { mobile })}</p>
               <button className="login-resend" onClick={() => setStep(1)}>
                 Change Number
               </button>
             </div>
             <div className="login-input-group">
-              <label>Enter OTP</label>
+              <label>{t('auth.enterOtp')}</label>
               <input
                 type="text"
                 value={otp}
@@ -189,7 +191,7 @@ function LoginPage() {
               onClick={verifyOtp}
               disabled={loading || otp.length !== 6}
             >
-              {loading ? 'Verifying...' : 'Verify OTP'}
+              {loading ? t('common.loading') : t('auth.verifyOtp')}
             </button>
           </div>
         )}
@@ -197,17 +199,17 @@ function LoginPage() {
         {/* STEP 3: Profile */}
         {step === 3 && (
           <div className="login-form">
-            <h3>Complete Your Profile</h3>
+            <h3>{t('auth.completeProfile')}</h3>
             <p>Create your devotee profile to continue</p>
             
             <div className="login-input-group">
-              <label>Full Name *</label>
+              <label>{t('auth.fullName')} *</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') completeProfile(); }}
-                placeholder="Enter your name"
+                placeholder={t('auth.namePlaceholder')}
               />
             </div>
 
@@ -216,13 +218,13 @@ function LoginPage() {
               onClick={completeProfile}
               disabled={loading || !name} 
             >
-              {loading ? 'Saving...' : 'Complete Profile'}
+              {loading ? t('common.loading') : t('auth.completeProfile')}
             </button>
           </div>
         )}
 
         <div className="login-footer">
-          <p>By continuing, you agree to our Terms of Service</p>
+          <p>{t('auth.terms')}</p>
         </div>
       </div>
     </main>

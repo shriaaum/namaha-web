@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getPujaById, isPujaUserSoldOut } from "../../data/pujaList";
 import "./PujaDetail.css";
 import Footer from "../Footer/Footer";
@@ -81,10 +82,10 @@ const renderRichText = (text) => {
 };
 
 const SECTION_TABS = [
-  { id: "packages", label: "Packages" },
-  { id: "benefits", label: "Benefits" },
-  { id: "temple", label: "Temple Details" },
-  { id: "faqs", label: "FAQs" },
+  { id: "packages", labelKey: "detailTabs.packages" },
+  { id: "benefits", labelKey: "detailTabs.benefits" },
+  { id: "temple", labelKey: "detailTabs.temple" },
+  { id: "faqs", labelKey: "detailTabs.faqs" },
 ];
 // --- Rating helpers (deterministic per item id) ---
 const hashStr = (str) => {
@@ -108,11 +109,16 @@ const getRatingAvatars = (id, count = 4) => {
 };
 // ---
 
-const PACKAGE_BULLETS = [
-  "The Puja will be performed by qualified Veda Pandits by following the right Puja Vidhi.",
-  "The Prasad will be delivered to your door step within 7-10 days and the puja video will be sent to your whatsapp within 24-48 hrs.",
-  "Since the Puja will be conducted at an auspicious time (at Shubh Muhurat), you will definitely get good results.",
-];
+// Text lives in i18n: pujaDetail.bullet1..3
+const PACKAGE_BULLET_KEYS = ["pujaDetail.bullet1", "pujaDetail.bullet2", "pujaDetail.bullet3"];
+
+// pkg.name stays English (image lookup + booking payload); only the label is translated.
+const PACKAGE_LABEL_KEYS = {
+  Individual: "pujaDetail.pkgIndividual",
+  Couple: "pujaDetail.pkgCouple",
+  Family: "pujaDetail.pkgFamily",
+  "Joint Family": "pujaDetail.pkgJoint",
+};
 
 const PACKAGE_IMAGES = {
   Individual: "https://img.freepik.com/premium-photo/indian-girl-dressed-traditional-attire-performing-graceful-dhunuchi-dance-with-clay-incense-burner-vibrant-durga-puja-celebrations_748982-26973.jpg?semt=ais_rp_progressive&w=740&q=80",
@@ -155,58 +161,23 @@ price:
   ];
 };
 
-const INCLUDES = [
-  "The participant's name and gotra will be recited by an experienced Panditji during the puja.",
-  "Participants will receive guided mantras and step-by-step instructions to join the puja from home.",
-  "A complete video of the puja and offerings will be shared on your WhatsApp.",
-  "A free Aashirwad Box with Tirth Prasad will be delivered to your home if you opt in to receive it.",
-];
+const INCLUDE_KEYS = ["pujaDetail.include1", "pujaDetail.include2", "pujaDetail.include3", "pujaDetail.include4"];
 
 const HOW_IT_WORKS_STEPS = [
-  { id: "select", title: "Puja Package", icon: "grid" },
-  { id: "name-gotra", title: "Name and Gotra", icon: "form" },
-  { id: "watch", title: "Watch Puja Video", icon: "video" },
-  { id: "prashad", title: "Prashad Shipped", icon: "box" },
+  { id: "select", titleKey: "pujaDetail.stepPackage", icon: "grid" },
+  { id: "name-gotra", titleKey: "pujaDetail.stepNameGotra", icon: "form" },
+  { id: "watch", titleKey: "pujaDetail.stepWatch", icon: "video" },
+  { id: "prashad", titleKey: "pujaDetail.stepPrashad", icon: "box" },
 ];
 
-const FAQ_ITEMS = [
-  {
-    q: "Why should I choose Shri aaum for performing a Puja?",
-    a: "Shri aaum is an official temple partner with experienced pandits. We offer transparent pricing, real-time puja updates, and delivery of prasad to your doorstep.",
-  },
-  {
-    q: "I don't know my Gotra, what should I do?",
-    a: 'You can leave the Gotra field blank or select "Unknown". Our team can also help you find it if you know your family deity or lineage.',
-  },
-  {
-    q: "Who will perform the Puja?",
-    a: "Experienced and qualified pandits from the temple perform the puja on your behalf. All devotees' names are recited during the collective puja.",
-  },
-  {
-    q: "What will be done in this Puja?",
-    a: "The puja includes mantra chanting, havan, and rituals as per the specific puja you select. Details are mentioned in the puja description.",
-  },
-  {
-    q: "How will I know the Puja has been done in my name?",
-    a: "You will receive real-time updates on your registered WhatsApp number. A complete video of the puja is also shared within 3-4 days.",
-  },
-  {
-    q: "What will I get after the Puja is done?",
-    a: "You receive the puja video on WhatsApp and an optional Aashirwad Box with Tirth Prasad delivered to your doorstep.",
-  },
-  {
-    q: "What are the other services offered by Shri aaum?",
-    a: "We offer various pujas, Gau SHRI AAUM, Deep Daan, Vastra SHRI AAUM, Anna SHRI AAUM, and other devotional services at partner temples.",
-  },
-  {
-    q: "Where can I contact for more information?",
-    a: "You can reach us via the contact details on our website or through the customer support option during checkout.",
-  },
-];
+// FAQ text lives in i18n: pujaDetail.faq{n}q / pujaDetail.faq{n}a
+const FAQ_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 function PujaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const packageLabel = (pkg) => (PACKAGE_LABEL_KEYS[pkg?.name] ? t(PACKAGE_LABEL_KEYS[pkg.name]) : pkg?.name);
 
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -245,7 +216,7 @@ function PujaDetail() {
 
   const handleBookPujaClick = (pkg) => {
     if (isPujaUserSoldOut(puja)) {
-      alert("Puja booking is closed for this listing.");
+      alert(t("pujaDetail.closedAlert"));
       return;
     }
     const mainImage = puja?.bannerUrls?.[0]?.url || null;
@@ -278,6 +249,21 @@ function PujaDetail() {
     };
     loadPuja();
   }, [id]);
+
+  // Language switch: re-fetch quietly so title, benefits, temple text etc. are re-localized.
+  useEffect(() => {
+    let active = true;
+    const onLanguageChanged = async () => {
+      if (!id) return;
+      const refreshed = await getPujaById(id);
+      if (active && refreshed) setPuja(refreshed);
+    };
+    i18n.on("languageChanged", onLanguageChanged);
+    return () => {
+      active = false;
+      i18n.off("languageChanged", onLanguageChanged);
+    };
+  }, [id, i18n]);
 
   // Sync mobile viewport and collapse lines on resize
   useEffect(() => {
@@ -407,7 +393,7 @@ function PujaDetail() {
       <>
         <div className="pd-loading-overlay" role="status" aria-live="polite">
           <div className="pd-loading-spinner" aria-hidden="true" />
-          <div className="pd-loading-text">Loading…</div>
+          <div className="pd-loading-text">{t("common.loading")}</div>
         </div>
         <main className="puja-detail-page" aria-hidden="true" />
       </>
@@ -418,9 +404,9 @@ function PujaDetail() {
     return (
       <main className="puja-detail-page">
         <div className="pd-not-found">
-          <p>Unable to find puja details.</p>
+          <p>{t("pujaDetail.notFound")}</p>
           <button type="button" onClick={() => navigate("/puja")}>
-            Back to Puja list
+            {t("pujaDetail.backToList")}
           </button>
         </div>
       </main>
@@ -444,7 +430,7 @@ function PujaDetail() {
                   >
                     <img
                       src={imgUrl}
-                      alt={`Slide ${i + 1}`}
+                      alt={t("pujaDetail.slideAlt", { number: i + 1 })}
                       className="pd-carousel-image"
                       loading={i === 0 ? "eager" : "lazy"}
                       decoding={i === 0 ? "sync" : "async"}
@@ -455,7 +441,7 @@ function PujaDetail() {
               </div>
               {/* <span className="pd-badge">{puja.specialTag}</span> */}
               {isBookingBlocked ? (
-                <span className="pd-soldout-tag" aria-hidden="true">SOLD OUT</span>
+                <span className="pd-soldout-tag" aria-hidden="true">{t("puja.soldOut")}</span>
               ) : null}
             </div>
 
@@ -474,7 +460,7 @@ function PujaDetail() {
               </p>
               <p className="pd-meta">
                 <span className="pd-meta-icon">📅</span>
-                {puja.date}
+                {puja.displayDate || puja.date}
               </p>
             </div>
 
@@ -498,7 +484,7 @@ function PujaDetail() {
                       className="pd-read-more-btn"
                       onClick={() => setAboutVisibleLines(999)}
                     >
-                      Read more
+                      {t("common.readMore")}
                     </button>
                   )}
                   {aboutVisibleLines > collapsedLines && (
@@ -507,30 +493,30 @@ function PujaDetail() {
                       className="pd-read-more-btn pd-read-less"
                       onClick={() => setAboutVisibleLines(collapsedLines)}
                     >
-                      Read less
+                      {t("common.readLess")}
                     </button>
                   )}
                 </div>
               </div>
             )}
 
-            <p className="pd-countdown-label">Puja booking will close in:</p>
+            <p className="pd-countdown-label">{t("pujaDetail.countdownLabel")}</p>
             <div className="pd-countdown">
               <div className="pd-countdown-item">
                 <span className="pd-countdown-num">{countdown.days}</span>
-                <span className="pd-countdown-label-sm">Days</span>
+                <span className="pd-countdown-label-sm">{t("pujaDetail.days")}</span>
               </div>
               <div className="pd-countdown-item">
                 <span className="pd-countdown-num">{countdown.hours}</span>
-                <span className="pd-countdown-label-sm">Hours</span>
+                <span className="pd-countdown-label-sm">{t("pujaDetail.hours")}</span>
               </div>
               <div className="pd-countdown-item">
                 <span className="pd-countdown-num">{countdown.minutes}</span>
-                <span className="pd-countdown-label-sm">Min</span>
+                <span className="pd-countdown-label-sm">{t("pujaDetail.min")}</span>
               </div>
               <div className="pd-countdown-item">
                 <span className="pd-countdown-num">{countdown.seconds}</span>
-                <span className="pd-countdown-label-sm">Secs</span>
+                <span className="pd-countdown-label-sm">{t("pujaDetail.secs")}</span>
               </div>
             </div>
             {(() => {
@@ -540,7 +526,7 @@ function PujaDetail() {
               const fullStars = Math.floor(rating);
               const hasHalf = rating - fullStars >= 0.3;
               return (
-                <div className="pd-rating-row" aria-label={`Rating: ${rating} out of 5 stars`}>
+                <div className="pd-rating-row" aria-label={t("detailCommon.ratingAria", { rating })}>
                   <div className="pd-rating-avatars">
                     {avatars.map((av, i) => (
                       <img key={i} src={av.src} alt="" aria-hidden="true" className="pd-rating-avatar" />
@@ -560,7 +546,7 @@ function PujaDetail() {
                       ))}
                     </span>
                     <span className="pd-rating-score">{rating.toFixed(1)}</span>
-                    <span className="pd-rating-count">({reviewCount} ratings)</span>
+                    <span className="pd-rating-count">{t("detailCommon.ratingsCount", { count: reviewCount })}</span>
                   </div>
                 </div>
               );
@@ -568,7 +554,7 @@ function PujaDetail() {
             {isBookingBlocked ? (
               <div className="pd-booking-closed" role="alert">
                 <span className="pd-booking-closed-icon">🔒</span>
-                <strong>Booking closed.</strong> This puja is not available for booking.
+                <strong>{t("detailCommon.bookingClosedStrong")}</strong> {t("pujaDetail.notAvailable")}
               </div>
             ) : null}
             {/* <div className="pd-participants">
@@ -591,7 +577,7 @@ function PujaDetail() {
               disabled={isBookingBlocked}
               onClick={() => !isBookingBlocked && scrollToSection("packages")}
             >
-              {isBookingBlocked ? "Booking closed" : "Select puja package →"}
+              {isBookingBlocked ? t("common.bookingClosed") : t("pujaDetail.selectPackage")}
             </button>
           </div>
         </div>
@@ -599,7 +585,7 @@ function PujaDetail() {
         {/* How it Works */}
         <section className="pd-how-it-works">
           <h2 className="pd-how-title">
-            <span className="pd-how-ornament">◆</span> How it Works <span className="pd-how-ornament">◆</span>
+            <span className="pd-how-ornament">◆</span> {t("pujaDetail.howTitle")} <span className="pd-how-ornament">◆</span>
           </h2>
           <div className="pd-how-steps">
             {HOW_IT_WORKS_STEPS.map((step, index) => (
@@ -632,7 +618,7 @@ function PujaDetail() {
                       <div className="pd-how-icon pd-how-icon-box" />
                     )}
                   </div>
-                  <h3 className="pd-how-step-title">{step.title}</h3>
+                  <h3 className="pd-how-step-title">{t(step.titleKey)}</h3>
                 </div>
                 {index < HOW_IT_WORKS_STEPS.length - 1 && (
                   <div className="pd-how-connector" aria-hidden="true">
@@ -663,7 +649,7 @@ function PujaDetail() {
                 }`}
                 onClick={() => scrollToSection(tab.id)}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             ))}
           </div>
@@ -680,7 +666,7 @@ function PujaDetail() {
           }}
         >
           <div className="pd-section-content">
-            <h2 className="pd-section-title">Select your puja package</h2>
+            <h2 className="pd-section-title">{t("pujaDetail.selectTitle")}</h2>
             <div className="pd-package-cards">
             {getPackages(puja).map((pkg, index) => (
                 <div
@@ -699,16 +685,16 @@ function PujaDetail() {
                   />
                   <span className="pd-package-price-tag">₹{pkg.price?.toLocaleString("en-IN")}</span>
                   <div className="pd-package-body">
-                    <h3 className="pd-package-name">{pkg.name}</h3>
+                    <h3 className="pd-package-name">{packageLabel(pkg)}</h3>
                     <ul className="pd-package-bullets">
                       {(expandedPackageIndex === index
-                        ? PACKAGE_BULLETS
-                        : PACKAGE_BULLETS.slice(0, 2)
-                      ).map((bullet, i) => (
-                        <li key={i}>{bullet}</li>
+                        ? PACKAGE_BULLET_KEYS
+                        : PACKAGE_BULLET_KEYS.slice(0, 2)
+                      ).map((bulletKey) => (
+                        <li key={bulletKey}>{t(bulletKey)}</li>
                       ))}
                     </ul>
-                    {PACKAGE_BULLETS.length > 2 && (
+                    {PACKAGE_BULLET_KEYS.length > 2 && (
                       <button
                         type="button"
                         className="pd-package-read-more"
@@ -719,7 +705,7 @@ function PujaDetail() {
                           );
                         }}
                       >
-                        {expandedPackageIndex === index ? "Read less" : "Read more"}
+                        {expandedPackageIndex === index ? t("common.readLess") : t("common.readMore")}
                       </button>
                     )}
                     <button
@@ -728,7 +714,7 @@ function PujaDetail() {
                       disabled={isBookingBlocked}
                       onClick={(e) => { e.stopPropagation(); handleBookPujaClick(pkg); }}
                     >
-                      {isBookingBlocked ? "BOOKING CLOSED" : "BOOK PUJA"}
+                      {isBookingBlocked ? t("pujaDetail.bookingClosedCaps") : t("pujaDetail.bookPuja")}
                     </button>
                   </div>
                 </div>
@@ -745,7 +731,7 @@ function PujaDetail() {
           }}
         >
           <div className="pd-section-content">
-            <h2 className="pd-section-title">Puja Benefits</h2>
+            <h2 className="pd-section-title">{t("pujaDetail.benefitsTitle")}</h2>
             <div className="pd-benefits-grid">
               {puja.benefits?.map((benefit, i) => {
                 const title = typeof benefit === 'object' ? benefit.title : benefit;
@@ -773,7 +759,7 @@ function PujaDetail() {
           <div className="pd-section-content">
             <h2 className="pd-temple-name">{puja.templeName}</h2>
             <div className="pd-temple-text">
-              {renderRichText(puja.templeDescription || "Temple details loading...")}
+              {renderRichText(puja.templeDescription || t("pujaDetail.templeLoading"))}
             </div>
           </div>
         </section>
@@ -781,18 +767,16 @@ function PujaDetail() {
         {/* Includes */}
         <section className="pd-section pd-includes">
           <div className="pd-section-content">
-            <h2 className="pd-section-title">All Puja Packages includes</h2>
+            <h2 className="pd-section-title">{t("pujaDetail.includesTitle")}</h2>
             <ul className="pd-includes-list">
-              {INCLUDES.map((item, i) => (
-                <li key={i}>
-                  <span className="pd-includes-check">✓</span> {item}
+              {INCLUDE_KEYS.map((itemKey) => (
+                <li key={itemKey}>
+                  <span className="pd-includes-check">✓</span> {t(itemKey)}
                 </li>
               ))}
             </ul>
             <p className="pd-includes-note">
-              Opt for additional offerings like Vastra Daan, Anna Daan, Deep
-              Daan, or Gau SHRI AAUM in your name, available on the payments
-              page.
+              {t("pujaDetail.includesNote")}
             </p>
           </div>
         </section>
@@ -898,23 +882,23 @@ function PujaDetail() {
         >
           <div className="pd-section-content">
             <div className="pd-faqs-header">
-              <h2 className="pd-section-title">Frequently asked Questions</h2>
+              <h2 className="pd-section-title">{t("detailCommon.faqTitle")}</h2>
             </div>
             <ul className="pd-faq-list">
-              {FAQ_ITEMS.map((item, i) => (
+              {FAQ_NUMBERS.map((n, i) => (
                 <li key={i} className="pd-faq-item">
                   <button
                     type="button"
                     className="pd-faq-question"
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   >
-                    {item.q}
+                    {t(`pujaDetail.faq${n}q`)}
                     <span className="pd-faq-chevron">
                       {openFaq === i ? "▲" : "▼"}
                     </span>
                   </button>
                   {openFaq === i && (
-                    <div className="pd-faq-answer">{item.a}</div>
+                    <div className="pd-faq-answer">{t(`pujaDetail.faq${n}a`)}</div>
                   )}
                 </li>
               ))}
@@ -934,12 +918,12 @@ function PujaDetail() {
               onClick={() => handleBookPujaClick(selectedPackage)}
             >
               <div className="pd-mobile-sticky-pkg-info">
-                <span className="pd-mobile-sticky-name">{selectedPackage.name}</span>
+                <span className="pd-mobile-sticky-name">{packageLabel(selectedPackage)}</span>
                 <span className="pd-mobile-sticky-price">
                   ₹{Number(selectedPackage.price).toLocaleString("en-IN")}
                 </span>
               </div>
-              <span className="pd-mobile-sticky-action">Book Now →</span>
+              <span className="pd-mobile-sticky-action">{t("common.bookNow")} →</span>
             </button>
           ) : (
             <button
@@ -951,14 +935,14 @@ function PujaDetail() {
                 scrollToSection("packages");
               }}
             >
-              Select puja package →
+              {t("pujaDetail.selectPackage")}
             </button>
           )}
         </div>
       )}
       {isBookingBlocked && (
         <div className="pd-mobile-sticky-cta pd-mobile-sticky-cta--closed">
-          <span className="pd-mobile-sticky-closed-text">🔒 Booking closed</span>
+          <span className="pd-mobile-sticky-closed-text">🔒 {t("common.bookingClosed")}</span>
         </div>
       )}
     </main>

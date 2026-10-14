@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import './Contact.css';
 import Footer from '../Footer/Footer';
 
 const WHATSAPP_NUMBER = "9177709684";
 
 function Contact() {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -44,8 +46,8 @@ function Contact() {
     <main className="contact-page">
       <section className="contact-hero">
         <div className="contact-hero-inner">
-          <h1>Contact Us</h1>
-          <p>We'd love to hear from you. Reach out for any queries or support.</p>
+          <h1>{t('contact.title')}</h1>
+          <p>{t('contact.subtitle')}</p>
         </div>
       </section>
 
@@ -53,45 +55,45 @@ function Contact() {
         <div className="contact-container">
           <div className="contact-grid">
             <div className="contact-info">
-              <h2>Get in Touch</h2>
+              <h2>{t('contact.getInTouch')}</h2>
               <div className="contact-info-item">
                 <span className="contact-icon">📍</span>
                 <div>
-                  <strong>Our Address</strong>
+                  <strong>{t('contact.ourAddress')}</strong>
                   <p>
-                    F.No.703, 7th Flr, Block-B, SVC Tree Walk,<br />
-                    Kondapur, Kondapur, Serilingampally,<br />
-                    K.V.Rangareddy, Telangana - 500084
+                    {t('address.line1')}<br />
+                    {t('address.line2')}<br />
+                    {t('address.line3')}
                   </p>
                 </div>
               </div>
               <div className="contact-info-item">
                 <span className="contact-icon">📧</span>
                 <div>
-                  <strong>Email</strong>
+                  <strong>{t('contact.email')}</strong>
                   <p>bhakta@shriaaum.com</p>
                 </div>
               </div>
               <div className="contact-info-item">
                 <span className="contact-icon">📱</span>
                 <div>
-                  <strong>Customer Support</strong>
-                  <p>Available via whatsapp</p>
-                  <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer"> 9177709684 (WhatsApp)</a>
+                  <strong>{t('contact.support')}</strong>
+                  <p>{t('contact.supportVia')}</p>
+                  <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer"> 9177709684 {t('contact.whatsappSuffix')}</a>
                 </div>
               </div>
             </div>
 
             <div className="contact-form-wrap">
-              <h2>Send us a Message</h2>
+              <h2>{t('contact.sendMessageTitle')}</h2>
               {submitted ? (
                 <div className="contact-success">
-                  <p>Thank you for your message! We'll get back to you soon.</p>
+                  <p>{t('contact.thankYou')}</p>
                 </div>
               ) : (
                 <form className="contact-form" onSubmit={handleSubmit}>
                   <div className="contact-field">
-                    <label htmlFor="name">Name</label>
+                    <label htmlFor="name">{t('contact.name')}</label>
                     <input
                       type="text"
                       id="name"
@@ -99,11 +101,11 @@ function Contact() {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      placeholder="Your name"
+                      placeholder={t('contact.namePlaceholder')}
                     />
                   </div>
                   <div className="contact-field">
-                    <label htmlFor="email">Email</label>
+                    <label htmlFor="email">{t('contact.email')}</label>
                     <input
                       type="email"
                       id="email"
@@ -111,22 +113,22 @@ function Contact() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      placeholder="your@email.com"
+                      placeholder={t('contact.emailPlaceholder')}
                     />
                   </div>
                   <div className="contact-field">
-                    <label htmlFor="subject">Subject</label>
+                    <label htmlFor="subject">{t('contact.subject')}</label>
                     <input
                       type="text"
                       id="subject"
                       name="subject"
                       value={formData.subject}
                       onChange={handleChange}
-                      placeholder="How can we help?"
+                      placeholder={t('contact.subjectPlaceholder')}
                     />
                   </div>
                   <div className="contact-field">
-                    <label htmlFor="message">Message</label>
+                    <label htmlFor="message">{t('contact.message')}</label>
                     <textarea
                       id="message"
                       name="message"
@@ -134,11 +136,11 @@ function Contact() {
                       onChange={handleChange}
                       required
                       rows={5}
-                      placeholder="Your message..."
+                      placeholder={t('contact.messagePlaceholder')}
                     />
                   </div>
                   <button type="submit" className="contact-btn">
-                    Send Message
+                    {t('contact.send')}
                   </button>
                 </form>
               )}

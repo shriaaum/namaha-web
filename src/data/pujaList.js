@@ -1,5 +1,7 @@
 import axiosInstance from "../lib/instance";
 import { useState, useEffect } from "react";
+import i18n from '../i18n';
+import { localizeRecord, localizePujaRecord, getDateLocale } from '../i18n/content';
 
 /** Grid column count for Puja list + Special Puja cards (see PujaList.css `.pl-cards`, SpecialPuja.css `.sp-cards`). */
 export const PUJA_LIST_GRID_COLUMNS = 4;
@@ -223,6 +225,11 @@ const mergeMatchedChadhavaOfferings = async (puja) => {
    MAP API RESPONSE → UI FORMAT
 ===================================================== */
 const mapApiPujaToPUJA_LIST = (apiPuja) => {
+  // English source kept for booking payloads/invoices (`titleEn`, add-on `nameEn`).
+  const source = apiPuja;
+  const englishAddonNames = new Map((source.addOns || []).map((a) => [String(a._id), a.name]));
+  // Reviewed local translations first; CMS `translations` (when the API sends them) override.
+  apiPuja = localizeRecord(localizePujaRecord(apiPuja, i18n.language), i18n.language);
   const ev = apiPuja.eventDate ? new Date(apiPuja.eventDate) : null;
   const fallback = apiPuja.createdAt ? new Date(apiPuja.createdAt) : null;
   const displayDateObj =
@@ -237,17 +244,20 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   const eventDateTimeRaw = getEventDateTimeRawInIST(apiPuja.eventDate, apiPuja.eventTime);
 
   const eventPieces = (() => {
-    if (!displayDateObj) return { eventDate: null, eventDateRaw: 0, date: "—" };
-    const formatted = new Intl.DateTimeFormat("en-GB", {
+    if (!displayDateObj) return { eventDate: null, eventDateRaw: 0, date: "—", displayDate: "—" };
+    const dateFormat = {
       timeZone: IST_TIMEZONE,
       day: "numeric",
       month: "short",
       year: "numeric",
-    }).format(displayDateObj);
+    };
+    // `date` stays en-GB: it is parsed by PujaDetail and saved into bookings by BillingPage.
+    const formatted = new Intl.DateTimeFormat("en-GB", dateFormat).format(displayDateObj);
     return {
       eventDate: formatted,
       eventDateRaw: eventDateTimeRaw,
       date: formatted,
+      displayDate: new Intl.DateTimeFormat(getDateLocale(i18n.language), dateFormat).format(displayDateObj),
     };
   })();
 
@@ -274,6 +284,7 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   // category: puja type/classification (e.g. GENERAL PUJA, FESTIVAL, WEALTH)
   category: apiPuja.category?.category?.toUpperCase() || "GENERAL PUJA",
   title: apiPuja.name,
+  titleEn: source.name,
   location:
     apiPuja.customSection ||
     `${
@@ -283,6 +294,7 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   addOns:
     apiPuja.addOns?.map((addon) => ({
       name: addon.name,
+      nameEn: englishAddonNames.get(String(addon._id)) || addon.name,
       price: `₹${addon.price}`,
       id: addon._id,
     })) || [],
@@ -457,6 +469,7 @@ export const fetchPujaList = async () => {
 // React hook: usePujaList provides pujas + loading + error for components
 export function usePujaList() {
   const [pujas, setPujas] = useState([]);
+  const [rawPujas, setRawPujas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -464,9 +477,15 @@ export function usePujaList() {
     let mounted = true;
     (async () => {
       try {
-        const data = await fetchPujaList();
+        const response = await axiosInstance.get("/pooja");
+        const data = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.poojas)
+            ? response.data.poojas
+            : [];
         if (!mounted) return;
-        setPujas(data);
+        setRawPujas(data);
+        setPujas(data.map(mapApiPujaToPUJA_LIST).sort(sortByAvailabilityThenDate));
       } catch (err) {
         if (!mounted) return;
         setError(err);
@@ -478,6 +497,14 @@ export function usePujaList() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const onLanguageChanged = () => {
+      setPujas(rawPujas.map(mapApiPujaToPUJA_LIST).sort(sortByAvailabilityThenDate));
+    };
+    i18n.on('languageChanged', onLanguageChanged);
+    return () => i18n.off('languageChanged', onLanguageChanged);
+  }, [rawPujas]);
 
   return { pujas, loading, error };
 }

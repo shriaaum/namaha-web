@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { localizePujaRecord } from "../../i18n/content";
+import { translateCmsText } from "../../i18n/cmsText";
 import Footer from "../Footer/Footer";
 import "./BillingPage.css";
 
 const CHADHAVA_PRASADAM_PRICE = 250;
 
 function BillingPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -122,7 +126,8 @@ function BillingPage() {
         const unitPrice = parseAmount(addon.price);
         return {
           id: addon.id || addonId,
-          name: addon.name,
+          // English name is saved in the booking; the UI shows getAddonDisplayName().
+          name: addon.nameEn || addon.name,
           price: unitPrice,
           quantity: qty,
           total: unitPrice * qty,
@@ -162,6 +167,40 @@ function BillingPage() {
     }
     return packagePrice + computedAddonsTotal;
   }, [isChadhavaFlow, passedGrandTotal, packagePrice, computedAddonsTotal, prasadamAmount]);
+  // Display-only names, re-translated live from the English source on language change.
+  const PACKAGE_LABEL_KEYS = {
+    Individual: "pujaDetail.pkgIndividual",
+    Couple: "pujaDetail.pkgCouple",
+    Family: "pujaDetail.pkgFamily",
+    "Joint Family": "pujaDetail.pkgJoint",
+  };
+  const pujaTitleEn = puja?.titleEn || puja?.title;
+  const displayPujaTitle = useMemo(() => {
+    if (!pujaTitleEn) return pujaTitleEn;
+    if (isChadhavaFlow) return translateCmsText(pujaTitleEn, i18n.language);
+    const localized = localizePujaRecord({ _id: puja?.id, name: pujaTitleEn }, i18n.language)?.name;
+    return localized && localized !== pujaTitleEn ? localized : translateCmsText(pujaTitleEn, i18n.language);
+  }, [isChadhavaFlow, puja?.id, pujaTitleEn, i18n.language]);
+  const addonDisplayNames = useMemo(() => {
+    const list = puja?.addOns || [];
+    const english = list.map((a) => ({ _id: a.id, name: a.nameEn || a.name }));
+    const localized = localizePujaRecord({ _id: puja?.id, addOns: english }, i18n.language)?.addOns || [];
+    return new Map(
+      list.map((a, index) => {
+        const en = english[index].name;
+        const viaRecord = localized[index]?.name;
+        const label = viaRecord && viaRecord !== en ? viaRecord : translateCmsText(en, i18n.language);
+        return [String(a.id || `addon-${index}`), label];
+      })
+    );
+  }, [puja?.id, puja?.addOns, i18n.language]);
+  const getAddonDisplayName = (addon, index) =>
+    isChadhavaFlow
+      ? translateCmsText(addon?.name, i18n.language)
+      : addonDisplayNames.get(String(addon?.id || `addon-${index}`)) || addon?.name;
+  const getPackageDisplayName = (pkg) =>
+    PACKAGE_LABEL_KEYS[pkg?.name] ? t(PACKAGE_LABEL_KEYS[pkg.name]) : pkg?.name;
+
   const resolvedSelectedPackage = useMemo(
     () =>
       isChadhavaFlow
@@ -189,7 +228,7 @@ function BillingPage() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ show: true, message, type });
     toastTimeoutRef.current = setTimeout(() => {
-      setToast((t) => ({ ...t, show: false }));
+      setToast((prev) => ({ ...prev, show: false }));
       toastTimeoutRef.current = null;
     }, 3500);
   }, []);
@@ -235,13 +274,13 @@ function BillingPage() {
     setCouponError("");
     const entered = (couponInput || "").trim();
     if (!entered) {
-      setCouponError("Please enter a coupon code.");
+      setCouponError({ key: "billing.couponEmpty" });
       return;
     }
 
     const poojaId = puja?._id || puja?.id;
     if (!poojaId) {
-      setCouponError("Puja details missing. Cannot validate coupon.");
+      setCouponError({ key: "billing.couponPujaMissing" });
       return;
     }
 
@@ -265,11 +304,11 @@ function BillingPage() {
         setAppliedCoupon(null);
         setDiscountAmount(0);
         setFinalAmount(subtotal);
-        setCouponError(data.message || "Invalid or expired coupon code");
+        setCouponError(data.message ? { text: data.message } : { key: "billing.couponInvalid" });
       }
     } catch (err) {
-      const message = err.response?.data?.message || "Failed to validate coupon. Please try again.";
-      setCouponError(message);
+      const serverMessage = err.response?.data?.message;
+      setCouponError(serverMessage ? { text: serverMessage } : { key: "billing.couponValidateFailed" });
       setAppliedCoupon(null);
       setDiscountAmount(0);
       setFinalAmount(subtotal);
@@ -565,26 +604,26 @@ function BillingPage() {
       !form.state?.trim() ||
       !String(form.pincode || "").trim()
     ) {
-      showToast("Please fill Phone Number, Street Address, City, State and Pincode");
+      showToast(t("billing.errFillRequired"));
       paymentStartedRef.current = false;
       return;
     }
 
     // Phone: must be exactly 10 digits
     if (!/^\d{10}$/.test(form.phone)) {
-      showToast("Please enter a valid 10-digit phone number.");
+      showToast(t("billing.errPhone"));
       paymentStartedRef.current = false;
       return;
     }
     if (!/^\d{6}$/.test(String(form.pincode || ""))) {
-      showToast("Please enter a valid 6-digit pincode.");
+      showToast(t("billing.errPincode"));
       paymentStartedRef.current = false;
       return;
     }
 
     // Email: if provided, must contain "@" in a basic valid pattern
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      showToast("Please enter a valid email address.");
+      showToast(t("billing.errEmail"));
       paymentStartedRef.current = false;
       return;
     }
@@ -592,13 +631,13 @@ function BillingPage() {
       .map((p, i) => (p.name?.trim() ? null : i + 1))
       .filter(Boolean);
     if (missingParticipantNames.length > 0) {
-      showToast(`Please enter Name for Participant ${missingParticipantNames.join(", ")}`);
+      showToast(t("billing.errParticipantNames", { list: missingParticipantNames.join(", ") }));
       paymentStartedRef.current = false;
       return;
     }
 
     if (!puja?.id) {
-      showToast("Puja details missing. Please go back and try again.");
+      showToast(t("billing.errPujaMissing"));
       navigate(-1);
       paymentStartedRef.current = false;
       return;
@@ -671,7 +710,7 @@ function BillingPage() {
           backendOrderAmountPaise
         );
       } else {
-        showToast(res.data.message || "Failed to create order. Please try again.");
+        showToast(res.data.message || t("billing.errCreateOrder"));
       }
     } catch (err) {
       const status = err.response?.status;
@@ -684,17 +723,17 @@ function BillingPage() {
       });
 
       if (status === 401) {
-        alert(message || "Unauthorized request. Please try again.");
+        alert(err.response?.data?.message || t("billing.paymentFailed"));
         return;
       }
 
       if (status === 409) {
-        showToast("Booking conflict. Please go back and try again.");
+        showToast(t("billing.errBookingConflict"));
         navigate(-1);
         return;
       }
 
-      showToast(message);
+      showToast(err.response?.data?.message || t("billing.paymentFailed"));
     } finally {
       setLoading(false);
     }
@@ -811,7 +850,7 @@ function BillingPage() {
       invoiceDate: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }),
       devoteeDetails: payload.devoteeDetails,
       participants: payload.participants,
-      pujaName: puja.title,
+      pujaName: pujaTitleEn,
       pujaDate: payload.date,
       packageName: selectedPackage?.name,
       packagePrice: selectedPackage?.price,
@@ -893,19 +932,19 @@ function BillingPage() {
 
   const loadRazorpay = (orderId, amount, backendOrderAmountPaise = null) => {
     if (!window.Razorpay) {
-      showToast("Razorpay SDK not loaded. Please refresh and try again.");
+      showToast(t("billing.errRazorpaySdk"));
       return;
     }
 
     const razorpayKey = process.env.REACT_APP_RAZORPAY_KEY_ID;
 
     if (!razorpayKey) {
-      showToast("Razorpay key missing. Check your .env file.");
+      showToast(t("billing.errRazorpayKey"));
       return;
     }
     if (!orderId || typeof orderId !== "string" || !orderId.startsWith("order_")) {
       console.error("Invalid order_id from backend:", orderId);
-      showToast("Invalid order from server. Please try again.");
+      showToast(t("billing.errInvalidOrder"));
       return;
     }
     setPendingRazorpayOrderId(orderId);
@@ -953,7 +992,7 @@ function BillingPage() {
       currency: "INR",
       order_id: orderId,
       name: "Shri Aaum",
-      description: `${puja.title} - ${selectedPackage.name}`,
+      description: `${pujaTitleEn} - ${selectedPackage.name}`,
 
       prefill: {
         name: form.name,
@@ -1025,13 +1064,13 @@ function BillingPage() {
           } catch (reconcileErr) {
             const reconcileStatus = reconcileErr?.response?.status;
             if (reconcileStatus === 409) {
-              showToast("Payment is captured but booking is still syncing. Please check My Bookings in a few seconds.");
+              showToast(t("billing.errPaymentSyncing"));
             } else if (reconcileStatus === 404) {
-              showToast("Booking not found for this payment. Please contact support.");
+              showToast(t("billing.errBookingNotFound"));
             } else {
               showToast(
                 reconcileErr?.response?.data?.message ||
-                  "Payment reconciliation failed. Please contact support."
+                  t("billing.errReconcileFailed")
               );
             }
             console.error("Reconcile payment error:", reconcileErr);
@@ -1055,9 +1094,16 @@ function BillingPage() {
       console.error("❌ Razorpay payment failed:", response.error);
       const msg = response.error?.description || response.error?.reason || "Payment failed.";
       if (response.error?.code === "BAD_REQUEST_ERROR" && msg.includes("id") && msg.includes("not exist")) {
-        showToast("Payment error: Razorpay key mismatch. Check .env and restart.");
+        showToast(t("billing.errKeyMismatch"));
       } else {
-        alert(`Payment failed: ${msg}`);
+        alert(
+          t("billing.paymentFailedReason", {
+            reason:
+              response.error?.description ||
+              response.error?.reason ||
+              t("billing.paymentFailed"),
+          })
+        );
       }
     });
     rzp.open();
@@ -1220,9 +1266,9 @@ function BillingPage() {
   if (!puja) {
     return (
       <div style={{ padding: "40px", textAlign: "center" }}>
-        <h2>Invalid Access</h2>
-        <p>Please go back and select a puja first.</p>
-        <button onClick={() => navigate("/puja")}>Back to Puja List</button>
+        <h2>{t("billing.invalidAccess")}</h2>
+        <p>{t("billing.selectPuja")}</p>
+        <button onClick={() => navigate("/puja")}>{t("billing.backToList")}</button>
       </div>
     );
   }
@@ -1267,7 +1313,7 @@ function BillingPage() {
       const data = res.data;
 
       if (data.success) {
-        showToast("Invoice sent to your WhatsApp! 📄", "success");
+        showToast(t("billing.invoiceWhatsapp"), "success");
       } else {
         console.error("❌ Failed sending WhatsApp PDF:", data.message);
       }
@@ -1286,33 +1332,33 @@ function BillingPage() {
     {postPaymentLoading && (
       <div className="billing-post-payment-overlay" role="status" aria-live="polite">
         <div className="billing-post-payment-spinner" aria-hidden="true" />
-        <p className="billing-post-payment-text">Please wait, Do not Refresh the page</p>
+        <p className="billing-post-payment-text">{t("billing.postPaymentWait")}</p>
       </div>
     )}
     {showInvoiceModal && invoiceData && (
       <div className="billing-invoice-backdrop">
         <div className="billing-invoice-modal">
-          <h2 className="billing-invoice-title">Payment Successful</h2>
+          <h2 className="billing-invoice-title">{t("billing.paymentSuccess")}</h2>
           <p className="billing-invoice-subtitle">
-            Your puja has been booked successfully. You can download the invoice or close this window.
+            {t("billing.bookingSuccessMessage")}
           </p>
 
           <div className="billing-invoice-section">
-            <h3>Invoice Summary</h3>
-            <p><strong>Puja:</strong> {invoiceData.pujaName}</p>
-            <p><strong>Date:</strong> {invoiceData.pujaDate || "-"}</p>
-            <p><strong>Package:</strong> {invoiceData.packageName} ({invoiceData.packagePrice})</p>
+            <h3>{t("billing.invoiceSummary")}</h3>
+            <p><strong>{t("billing.labelPuja")}:</strong> {invoiceData.pujaName}</p>
+            <p><strong>{t("billing.labelDate")}:</strong> {invoiceData.pujaDate || "-"}</p>
+            <p><strong>{t("billing.labelPackage")}:</strong> {invoiceData.packageName} ({invoiceData.packagePrice})</p>
             {invoiceData.prasadam && invoiceData.prasadamAmount > 0 && (
-              <p><strong>Prasadam:</strong> ₹{invoiceData.prasadamAmount}</p>
+              <p><strong>{t("billing.prasadam")}:</strong> ₹{invoiceData.prasadamAmount}</p>
             )}
-            <p><strong>Grand Total:</strong> ₹{invoiceData.grandTotal}</p>
+            <p><strong>{t("billing.grandTotal")}:</strong> ₹{invoiceData.grandTotal}</p>
           </div>
 
           <div className="billing-invoice-section">
-            <h3>Devotee Details</h3>
-            <p><strong>Name:</strong> {invoiceData.devoteeDetails?.name || "-"}</p>
-            <p><strong>Phone:</strong> {invoiceData.devoteeDetails?.phone || "-"}</p>
-            <p><strong>Email:</strong> {invoiceData.devoteeDetails?.email || "-"}</p>
+            <h3>{t("billing.devoteeDetails")}</h3>
+            <p><strong>{t("billing.labelName")}:</strong> {invoiceData.devoteeDetails?.name || "-"}</p>
+            <p><strong>{t("billing.labelPhone")}:</strong> {invoiceData.devoteeDetails?.phone || "-"}</p>
+            <p><strong>{t("billing.email")}:</strong> {invoiceData.devoteeDetails?.email || "-"}</p>
           </div>
 
           <div className="billing-invoice-section billing-invoice-actions">
@@ -1321,14 +1367,14 @@ function BillingPage() {
               className="billing-invoice-btn billing-invoice-btn-primary"
               onClick={handleDownloadInvoice}
             >
-              Download Invoice
+              {t("billing.downloadInvoice")}
             </button>
             <button
               type="button"
               className="billing-invoice-btn billing-invoice-btn-secondary"
               onClick={handleCloseInvoice}
             >
-              Close
+              {t("billing.close")}
             </button>
           </div>
         </div>
@@ -1341,13 +1387,13 @@ function BillingPage() {
           <div className="billing-left-image-wrap">
             <img
               src={image || "https://via.placeholder.com/600x800"}
-              alt={puja.title}
+              alt={displayPujaTitle}
             />
           </div>
           <div className="billing-left-message">
-            <p className="billing-left-message-title">Complete Your Sacred Booking</p>
+            <p className="billing-left-message-title">{t("billing.completeBookingTitle")}</p>
             <p className="billing-left-message-text">
-              Please fill in your details and complete the payment here. Just a few quick steps and your puja will be confirmed — we'll take care of the rest so you can focus on blessings.
+              {t("billing.completeBookingText")}
             </p>
           </div>
         </div>
@@ -1355,40 +1401,40 @@ function BillingPage() {
 
       {/* RIGHT CONTENT */}
       <div className="billing-right">
-        <h2>Billing Details</h2>
+        <h2>{t("billing.details")}</h2>
 
         {/* SUMMARY */}
         {/* SUMMARY */}
         <div className="billing-summary">
-          <h3>{puja.title}</h3>
+          <h3>{displayPujaTitle}</h3>
           {isChadhavaFlow && selectedChadhava && (
             <div className="billing-selected-chadhava">
               <p>
-                <b>Selected Chadhava:</b> {selectedChadhava.title || puja.title}
+                <b>{t("billing.selectedChadhava")}:</b> {translateCmsText(selectedChadhava.title, i18n.language) || displayPujaTitle}
               </p>
               {selectedChadhava.date && (
                 <p>
-                  <b>Chadhava Date:</b> {selectedChadhava.date}
+                  <b>{t("billing.chadhavaDate")}:</b> {selectedChadhava.date}
                 </p>
               )}
             </div>
           )}
           <p>
-            <b>{isChadhavaFlow ? "Type" : "Package"}:</b>{" "}
+            <b>{isChadhavaFlow ? t("billing.labelType") : t("billing.labelPackage")}:</b>{" "}
             {isChadhavaFlow
-              ? (selectedChadhava?.title || puja?.title || selectedPackage?.name)
-              : selectedPackage?.name}
+              ? (translateCmsText(selectedChadhava?.title, i18n.language) || displayPujaTitle || selectedPackage?.name)
+              : getPackageDisplayName(selectedPackage)}
           </p>
           <p>
-            <b>{isChadhavaFlow ? "Offerings Amount" : "Package Amount"}:</b> {selectedPackage.price}
+            <b>{isChadhavaFlow ? t("billing.offeringsAmount") : t("billing.packageAmount")}:</b> {selectedPackage.price}
           </p>
 
           {/* Puja: choose add-ons on billing (quantities) */}
           {!isChadhavaFlow && puja?.addOns?.length > 0 && (
             <div className="billing-addons-picker">
-              <h4 className="billing-addons-picker-title">Add-ons (optional)</h4>
+              <h4 className="billing-addons-picker-title">{t("billing.addonsOptional")}</h4>
               <p className="billing-addons-picker-hint">
-                Select quantities for extra offerings. Totals update below.
+                {t("billing.addonsHint")}
               </p>
               <div className="billing-addons-picker-list">
                 {puja.addOns.map((addon, index) => {
@@ -1397,8 +1443,8 @@ function BillingPage() {
                   return (
                     <div key={addonId} className="billing-addon-row">
                       <div className="billing-addon-row-info">
-                        <span className="billing-addon-name" title={addon.name}>
-                          {addon.name}
+                        <span className="billing-addon-name" title={getAddonDisplayName(addon, index)}>
+                          {getAddonDisplayName(addon, index)}
                         </span>
                         <span className="billing-addon-unit">{addon.price}</span>
                       </div>
@@ -1407,7 +1453,7 @@ function BillingPage() {
                           type="button"
                           className="billing-qty-btn"
                           onClick={() => updatePujaAddonQuantity(addonId, -1)}
-                          aria-label="Decrease quantity"
+                          aria-label={t("billing.decreaseQuantity")}
                         >
                           −
                         </button>
@@ -1416,7 +1462,7 @@ function BillingPage() {
                           type="button"
                           className="billing-qty-btn"
                           onClick={() => updatePujaAddonQuantity(addonId, 1)}
-                          aria-label="Increase quantity"
+                          aria-label={t("billing.increaseQuantity")}
                         >
                           +
                         </button>
@@ -1431,11 +1477,13 @@ function BillingPage() {
           {/* ADDONS SUMMARY (selected lines) */}
           {resolvedAddons && resolvedAddons.length > 0 && (
             <div className="addons-summary">
-              <h4>Add-ons ({resolvedAddons.length})</h4>
+              <h4>{t("billing.addonsWithCount", { n: resolvedAddons.length })}</h4>
               {resolvedAddons.map((addon, index) => (
                 <div key={addon.id || index} className="addon-row">
                   <span>
-                    {addon.name} × {addon.quantity} (₹{parseAmount(addon.price)})
+                    {isChadhavaFlow
+                      ? translateCmsText(addon.name, i18n.language)
+                      : (addonDisplayNames.get(String(addon.id)) || addon.name)} × {addon.quantity} (₹{parseAmount(addon.price)})
                   </span>
                   {!isChadhavaFlow && (
                     <span className="addon-price">₹{addon.total}</span>
@@ -1443,7 +1491,7 @@ function BillingPage() {
                 </div>
               ))}
               <div className="addons-total-row">
-                <span className="addons-total-label">Addons Total:</span>
+                <span className="addons-total-label">{t("billing.addonsTotal")}:</span>
                 <span className="addons-total-price">₹{computedAddonsTotal}</span>
               </div>
             </div>
@@ -1455,11 +1503,11 @@ function BillingPage() {
               {!couponApplied ? (
                 <>
                   <div className="billing-coupon-row">
-                    <span className="billing-coupon-label">Coupon:</span>
+                    <span className="billing-coupon-label">{t("billing.coupon")}:</span>
                     <input
                       type="text"
                       className="billing-coupon-input"
-                      placeholder="Enter coupon code"
+                      placeholder={t("billing.couponPlaceholder")}
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       disabled={couponLoading}
@@ -1470,23 +1518,25 @@ function BillingPage() {
                       onClick={handleApplyCoupon}
                       disabled={couponLoading}
                     >
-                      {couponLoading ? "Checking…" : "Apply"}
+                      {couponLoading ? t("billing.checking") : t("billing.apply")}
                     </button>
                   </div>
                   {couponError && (
-                    <p className="billing-coupon-error">{couponError}</p>
+                    <p className="billing-coupon-error">
+                      {couponError.key ? t(couponError.key) : couponError.text}
+                    </p>
                   )}
                 </>
               ) : (
                 <div className="discount-row billing-coupon-applied">
-                  <span>Coupon ({appliedCoupon?.code}) applied</span>
+                  <span>{t("billing.couponApplied", { code: appliedCoupon?.code })}</span>
                   <span className="discount-price">- ₹{discountAmount}</span>
                   <button
                     type="button"
                     className="billing-coupon-remove"
                     onClick={handleRemoveCoupon}
                   >
-                    Remove
+                    {t("billing.remove")}
                   </button>
                 </div>
               )}
@@ -1503,42 +1553,42 @@ function BillingPage() {
             />
             <span>
               {isChadhavaFlow
-                ? `Prasadam (₹${CHADHAVA_PRASADAM_PRICE})`
-                : "Prasadam (Free)"}
+                ? t("billing.prasadamPaid", { price: CHADHAVA_PRASADAM_PRICE })
+                : t("billing.prasadamFree")}
             </span>
           </label>
           {isSpecialCouponApplied ? (
             <p className="billing-prasadam-note">
               {isChadhavaFlow
-                ? "For this coupon, prasadam is not available."
-                : "For this coupon, prasadam is not free."}
+                ? t("billing.prasadamNotAvailable")
+                : t("billing.prasadamNotFree")}
             </p>
           ) : null}
 
           {prasadamAmount > 0 && (
             <div className="addons-total-row">
-              <span className="addons-total-label">Prasadam:</span>
+              <span className="addons-total-label">{t("billing.prasadam")}:</span>
               <span className="addons-total-price">₹{prasadamAmount}</span>
             </div>
           )}
 
           {/* ✅ GRAND TOTAL */}
           <div className="grand-total-row">
-            <span className="grand-total-label">Grand Total:</span>
+            <span className="grand-total-label">{t("billing.grandTotal")}:</span>
             <span className="grand-total-price">₹{finalPayable}</span>
           </div>
         </div>
 
         {/* PARTICIPANTS */}
         <div className="participants-section">
-          <h3>Participant Details</h3>
+          <h3>{t("billing.participantDetails")}</h3>
 
           {participants.map((p, index) => (
             <div key={index} className="participant-card">
-              <h4>Participant {index + 1}</h4>
+              <h4>{t("billing.participantN", { n: index + 1 })}</h4>
 
               <input
-                placeholder="Name *"
+                placeholder={t("billing.participantNamePlaceholder")}
                 value={p.name}
                 onChange={(e) =>
                   handleParticipantChange(index, "name", e.target.value)
@@ -1546,7 +1596,7 @@ function BillingPage() {
                 required
               />
               <input
-                placeholder="Gotra"
+                placeholder={t("billing.gotra")}
                 value={p.gotra}
                 onChange={(e) =>
                   handleParticipantChange(index, "gotra", e.target.value)
@@ -1560,7 +1610,7 @@ function BillingPage() {
         <div className="billing-form">
           <input
             name="name"
-            placeholder="Full Name *"
+            placeholder={t("billing.name")}
             value={form.name}
             onChange={handleChange}
             style={{ display: "none" }}
@@ -1569,14 +1619,14 @@ function BillingPage() {
           <input
             type="email"
             name="email"
-            placeholder="Email"
+            placeholder={t("billing.email")}
             value={form.email}
             onChange={handleChange}
           />
           <input
             type="tel"
             name="phone"
-            placeholder="Phone Number *"
+            placeholder={t("billing.phone")}
             value={form.phone}
             onChange={handleChange}
             maxLength={10}
@@ -1584,21 +1634,21 @@ function BillingPage() {
           />
           <input
             name="streetAddress"
-            placeholder="Street Address *"
+            placeholder={t("billing.address")}
             value={form.streetAddress}
             onChange={handleChange}
             required
           />
           <input
             name="city"
-            placeholder="City *"
+            placeholder={t("billing.city")}
             value={form.city}
             onChange={handleChange}
             required
           />
           <input
             name="state"
-            placeholder="State *"
+            placeholder={t("billing.state")}
             value={form.state}
             onChange={handleChange}
             required
@@ -1606,7 +1656,7 @@ function BillingPage() {
           <input
             type="text"
             name="pincode"
-            placeholder="Pincode *"
+            placeholder={t("billing.pincode")}
             value={form.pincode}
             onChange={handleChange}
             maxLength={6}
@@ -1620,7 +1670,7 @@ function BillingPage() {
           disabled={loading}
           className="pay-button pay-button-desktop"
         >
-          {loading ? "Processing..." : `Pay ₹${finalPayable}`}
+          {loading ? t("billing.processing") : t("billing.pay", { amount: finalPayable })}
         </button>
       </div>
     </div>
@@ -1632,7 +1682,7 @@ function BillingPage() {
         disabled={loading}
         className="pay-button pay-button-mobile"
       >
-        {loading ? "Processing..." : `Pay ₹${finalPayable}`}
+        {loading ? t("billing.processing") : t("billing.pay", { amount: finalPayable })}
       </button>
     </div>
 

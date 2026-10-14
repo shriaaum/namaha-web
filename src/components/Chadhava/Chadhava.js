@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
 import {
@@ -9,6 +9,10 @@ import {
 } from '../../data/pujaList';
 import './Chadhava.css';
 import Footer from '../Footer/Footer';
+import { useTranslation } from 'react-i18next';
+import i18nInstance from '../../i18n';
+import { localizeChadhava } from '../../i18n/cmsText';
+import { getDateLocale } from '../../i18n/content';
 
 const INITIAL_VISIBLE_CARDS = 4;
 const LOAD_MORE_STEP = 4;
@@ -21,22 +25,24 @@ const getItemsFromResponse = (data) => {
   return [];
 };
 
-const normalizeCard = (item = {}) => {
-  const rawId = item.id || item._id || item.shortTitle || item.slug || item.title;
-  const idOrShortTitle = item.id || item._id || item.shortTitle || item.slug;
+const normalizeCard = (rawItem = {}) => {
+  // Ids/dates come from the raw record; visible text from the localized copy.
+  const item = localizeChadhava(rawItem, i18nInstance.language);
+  const rawId = rawItem.id || rawItem._id || rawItem.shortTitle || rawItem.slug || rawItem.title;
+  const idOrShortTitle = rawItem.id || rawItem._id || rawItem.shortTitle || rawItem.slug;
   const rawDate = item.eventdate || item.eventDate || item.dateText || item.dateRange;
   const eventDateRaw = getEventDateTimeRawInIST(rawDate, item.eventTime);
   const soldTagPolicy = normalizeApiSoldTag(item.soldTag ?? item.soldTagPolicy);
   const card = {
     id: String(rawId || Math.random()),
     idOrShortTitle,
-    title: item.title || 'Untitled Chadhava',
-    eventdate: rawDate || 'Date will be announced',
+    title: item.title || i18nInstance.t('chadhava.untitled'),
+    eventdate: rawDate || '',
     eventDateRaw,
     soldTagPolicy,
-    description: item.description || 'Details will be updated soon.',
+    description: item.description || i18nInstance.t('chadhava.detailsSoon'),
     bannerImage: item.bannerImage || item.image || item.thumbnail || '',
-    buttonText: item.buttonText || item.ctaText || 'View Details',
+    buttonText: item.buttonText || item.ctaText || i18nInstance.t('common.viewDetails'),
   };
   return {
     ...card,
@@ -57,9 +63,22 @@ const sortChadhavaByAvailabilityThenDate = (a, b) => {
 };
 
 function Chadhava() {
-  const [cards, setCards] = useState([]);
+  const { t, i18n } = useTranslation();
+  const [rawItems, setRawItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Re-localize already-fetched items whenever the language changes.
+  const cards = useMemo(
+    () =>
+      rawItems
+        .map(normalizeCard)
+        .filter((card) => card.idOrShortTitle || card.id)
+        .sort(sortChadhavaByAvailabilityThenDate),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rawItems, i18n.language]
+  );
   const [expandedCards, setExpandedCards] = useState({});
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_CARDS);
   const navigate = useNavigate();
@@ -68,10 +87,10 @@ function Chadhava() {
   /* Banner sizing lives in `Chadhava.css` — mirrors `PujaList.css` `.pl-card-banner` */
 
   const formatEventDate = (value) => {
-    if (!value) return 'Date will be announced';
+    if (!value) return t('chadhava.dateAnnounced');
     const d = new Date(value);
     if (!Number.isNaN(d.getTime())) {
-      return d.toLocaleDateString('en-GB', {
+      return d.toLocaleDateString(getDateLocale(i18n.language), {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -86,19 +105,18 @@ function Chadhava() {
     const loadChadhavaCards = async () => {
       try {
         setLoading(true);
-        setError('');
+        setError(false);
+        setErrorMessage('');
         const res = await axiosInstance.get('/chadhava');
         const items = getItemsFromResponse(res?.data);
         if (!mounted) return;
-        const mapped = items
-          .map(normalizeCard)
-          .filter((card) => card.idOrShortTitle || card.id);
-        const sorted = [...mapped].sort(sortChadhavaByAvailabilityThenDate);
-        setCards(sorted);
+        setRawItems(items);
       } catch (err) {
         if (!mounted) return;
-        setError(err?.response?.data?.message || 'Unable to load Chadhava offerings right now.');
-        setCards([]);
+        // Keep the server message (if any); the fallback is translated at render.
+        setError(true);
+        setErrorMessage(err?.response?.data?.message || '');
+        setRawItems([]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -144,7 +162,7 @@ function Chadhava() {
         <div className="ch-hero-inner">
           <div className="ch-hero-content">
             <h1 className="ch-hero-title">
-              Offer Chadhava as per Vedic rituals at sacred Hindu Pilgrimages and Temples in India
+              {t('chadhava.listTitle')}
             </h1>
           </div>
         </div>
@@ -154,7 +172,7 @@ function Chadhava() {
       <section className="ch-offerings" ref={offeringsRef}>
         <div className="ch-offerings-header">
           <h2 className="ch-offerings-title">
-            Upcoming Chadhava Offerings ({cards.length})
+            {t('chadhava.upcoming', { count: cards.length })}
           </h2>
           {/* <p className="ch-offerings-subtitle">
             Experience the divine with Shri aaum Chadhava SHRI AAUM. Offer Chadhava at renowned
@@ -166,12 +184,12 @@ function Chadhava() {
         {loading ? (
           <div className="ch-loading-state" role="status" aria-live="polite">
             <div className="ch-loading-spinner" aria-hidden="true" />
-            <p className="ch-loading-text">Loading chadhava offerings...</p>
+            <p className="ch-loading-text">{t('chadhava.loading')}</p>
           </div>
         ) : error ? (
-          <p className="ch-offerings-subtitle">{error}</p>
+          <p className="ch-offerings-subtitle">{errorMessage || t('chadhava.loadError')}</p>
         ) : cards.length === 0 ? (
-          <p className="ch-offerings-subtitle">No chadhava offerings available currently.</p>
+          <p className="ch-offerings-subtitle">{t('chadhava.empty')}</p>
         ) : (
           <div
             className={`ch-card-grid${visibleCards.length === 1 ? ' ch-card-grid--single' : ''}`}
@@ -202,7 +220,7 @@ function Chadhava() {
                     />
                   )}
                   {isPastEvent ? (
-                    <span className="ch-card-sold-out-tag">SOLD OUT</span>
+                    <span className="ch-card-sold-out-tag">{t('puja.soldOut')}</span>
                   ) : null}
                 </div>
                 <div className="ch-card-body">
@@ -223,12 +241,12 @@ function Chadhava() {
                         }));
                       }}
                     >
-                      {expandedCards[card.id] ? 'Read less' : 'Read more'}
+                      {expandedCards[card.id] ? t('common.readLess') : t('common.readMore')}
                     </button>
                   )}
                   {isPastEvent ? (
                     <div className="ch-card-cta ch-card-cta--disabled" aria-disabled="true">
-                      Booking closed
+                      {t('common.bookingClosed')}
                     </div>
                   ) : (
                     <Link

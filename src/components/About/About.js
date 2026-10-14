@@ -1,8 +1,10 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import './About.css';
 import Footer from '../Footer/Footer';
 
 function About() {
+  const { t } = useTranslation();
   // const stats = [
   //   { id: 1, icon: '🙏', value: '10k', label: 'Devotees' },
   //   { id: 2, icon: '⭐', value: '4.5', label: 'Star Rating' },
@@ -13,10 +15,10 @@ function About() {
     <main className="about-page">
       <section className="about-hero">
         <div className="about-hero-inner">
-          <img src="/logo.png" alt="Shri AAUM" className="about-logo" />
-          <h1>About Shri AAUM</h1>
+          <img src="/logo.png" alt={t('about.logoAlt')} className="about-logo" />
+          <h1>{t('about.title')}</h1>
           <p className="about-tagline">
-            India's Most Trusted Devotional Platform
+            {t('about.tagline')}
           </p>
         </div>
       </section>
@@ -24,39 +26,39 @@ function About() {
       <section className="about-content">
         <div className="about-container">
           <p className="about-desc">
-            In a world that moves fast, sacred traditions must not be left behind.
+            {t('about.p1')}
           </p>
           <p className="about-desc">
-            Shri Aaum was founded with a singular intention to preserve, structure, and make accessible the living spiritual traditions of Bharat in their most authentic form.
+            {t('about.p2')}
           </p>
           <p className="about-desc">
-            <strong>Shri</strong> represents divine abundance, grace, prosperity, and auspicious flow.<br />
-            <strong>Aaum (Om)</strong> is the primordial cosmic vibration, the eternal sound from which creation unfolds.
+            <strong>{t('about.shriLabel')}</strong> {t('about.shriText')}<br />
+            <strong>{t('about.aaumLabel')}</strong> {t('about.aaumText')}
           </p>
           <p className="about-desc">
-            Together, Shri Aaum is a conscious invocation of divine order into everyday life.
+            {t('about.p4')}
           </p>
           <p className="about-desc">
-            We are a sacred bridge connecting devotees to powerful temples, teerth kshetras, ancient rituals, and scripturally rooted practices that have guided seekers for centuries.
+            {t('about.p5')}
           </p>
         </div>
       </section>
 
       <section className="about-values">
         <div className="about-container">
-          <h2>Our work is rooted in three core principles:</h2>
+          <h2>{t('about.principlesTitle')}</h2>
           <div className="about-values-grid">
             <div className="about-value-card">
-              <h3>Temple</h3>
-              <p>Authentic temple rituals and kshetra-based pujas performed in their traditional lineage.</p>
+              <h3>{t('about.templeTitle')}</h3>
+              <p>{t('about.templeText')}</p>
             </div>
             <div className="about-value-card">
-              <h3>Teerth</h3>
-              <p>Sacred Kshetras honoring the spiritual power of place, pilgrimage, and energetic sanctity.</p>
+              <h3>{t('about.teerthTitle')}</h3>
+              <p>{t('about.teerthText')}</p>
             </div>
             <div className="about-value-card">
-              <h3>Tattva</h3>
-              <p>The deeper spiritual essence ensuring every offering is aligned with scriptural authenticity and philosophical integrity.</p>
+              <h3>{t('about.tattvaTitle')}</h3>
+              <p>{t('about.tattvaText')}</p>
             </div>
           </div>
         </div>
@@ -65,15 +67,15 @@ function About() {
       <section className="about-content">
         <div className="about-container">
           <p className="about-desc">
-            We collaborate with vedic priests and temple authorities, to ensure every ritual is conducted with precision, purity, and respect for lineage.
+            {t('about.p6')}
           </p>
           <p className="about-desc">
-            For those who cannot always travel to ancient kshetras…<br />
-            For those seeking structure in their spiritual journey…<br />
-            For those who wish to align with divine grace consciously…
+            {t('about.forTravel')}<br />
+            {t('about.forStructure')}<br />
+            {t('about.forGrace')}
           </p>
           <p className="about-desc about-cta">
-            Shri Aaum brings Temple • Teerth • Tattva within your reach.
+            {t('about.cta')}
           </p>
         </div>
       </section>
