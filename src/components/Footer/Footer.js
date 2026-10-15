@@ -30,6 +30,9 @@ function Footer() {
     const companyLinks = [
         { label: t('footer.aboutUs'), href: '/about' },
         { label: t('footer.contactUs'), href: '/contact' },
+        { label: t('footer.privacyPolicy'), href: '/privacy-policy' },
+        { label: t('footer.cancellationRefundPolicy'), href: '/cancellation-refund-policy' },
+        { label: t('footer.termsOfService'), href: '/terms-of-service' },
     ];
     const serviceLinks = [
         { label: t('footer.puja'), href: '/puja' },

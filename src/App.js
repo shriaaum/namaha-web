@@ -20,6 +20,7 @@ const BillingPage    = lazy(() => import('./components/BillingPage/BillingPage')
 const MyBookings     = lazy(() => import('./components/MyBooking/MyBooking'));
 const BookingDetailsModal = lazy(() => import('./components/BookingDetailsModal/BookingDetailsModal'));
 const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB'));
+const PolicyPage     = lazy(() => import('./components/PolicyPage/PolicyPage'));
 
 // Placeholder for below-the-fold home sections while their chunk loads.
 const SectionSkeleton = () => <div aria-hidden="true" style={{ minHeight: 320 }} />;
@@ -77,6 +78,10 @@ function App() {
             </Suspense>
           </Layout>
         } />
+
+        <Route path="/privacy-policy" element={<Layout><Suspense fallback={<PageLoader />}><PolicyPage policy="privacy" /></Suspense></Layout>} />
+        <Route path="/cancellation-refund-policy" element={<Layout><Suspense fallback={<PageLoader />}><PolicyPage policy="refund" /></Suspense></Layout>} />
+        <Route path="/terms-of-service" element={<Layout><Suspense fallback={<PageLoader />}><PolicyPage policy="terms" /></Suspense></Layout>} />
 
         <Route path="/Profile" element={
           <Layout>

@@ -166,7 +166,7 @@ function Layout({ children }) {
 
     // Scroll to top when navigating to Home or Puja
     useEffect(() => {
-        if (['/', '/puja', '/chadhava', '/about', '/contact'].includes(location.pathname)) {
+        if (['/', '/puja', '/chadhava', '/about', '/contact', '/privacy-policy', '/cancellation-refund-policy', '/terms-of-service'].includes(location.pathname)) {
             window.scrollTo({ top: 0, behavior: 'auto' });
         }
     }, [location.pathname]);
