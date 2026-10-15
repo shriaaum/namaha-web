@@ -353,6 +353,9 @@ function BillingPage() {
   };
 
   const participantCount = getParticipantCount();
+  // Multi-person Pooja packages use one family Gothra. Chadhava and individual
+  // Pooja bookings retain their existing per-participant Gothra behavior.
+  const usesSharedGotra = !isChadhavaFlow && participantCount > 1;
 
   // ================= DEVOTEE FORM =================
   const [form, setForm] = useState(
@@ -380,9 +383,17 @@ function BillingPage() {
   }, [form.streetAddress, form.city, form.state, form.pincode]);
 
   const getDevoteeDetailsPayload = useCallback(() => ({
-    ...form,
-    address: composedAddress,
-  }), [form, composedAddress]);
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    ...(prasadam && {
+      streetAddress: form.streetAddress,
+      city: form.city,
+      state: form.state,
+      pincode: form.pincode,
+      address: composedAddress,
+    }),
+  }), [form, composedAddress, prasadam]);
 
   // ================= PARTICIPANTS =================
   const [participants, setParticipants] = useState(
@@ -391,6 +402,9 @@ function BillingPage() {
       name: "",
       gotra: "",
     }))
+  );
+  const [sharedGotra, setSharedGotra] = useState(
+    () => location.state?.sharedGotra ?? location.state?.participants?.[0]?.gotra ?? ""
   );
 
   // When participant count from package changes, resize participants array to match
@@ -407,6 +421,17 @@ function BillingPage() {
       return prev.slice(0, participantCount);
     });
   }, [participantCount, participants.length]);
+
+  // Store the shared value on every participant so existing booking payloads
+  // and backend records remain fully compatible.
+  useEffect(() => {
+    if (!usesSharedGotra) return;
+    setParticipants((previous) => previous.map((participant) => (
+      participant.gotra === sharedGotra
+        ? participant
+        : { ...participant, gotra: sharedGotra }
+    )));
+  }, [usesSharedGotra, sharedGotra]);
 
   const [loading, setLoading] = useState(false);
   const [postPaymentLoading, setPostPaymentLoading] = useState(false);
@@ -432,14 +457,15 @@ function BillingPage() {
   // Autosave when devotee form is filled. Name from form or Participant 1 (name field is hidden).
   const isFormValidForPending = useCallback(() => {
     const devoteeName = form.name?.trim() || participants[0]?.name?.trim();
-    if (
-      !devoteeName ||
-      !form.phone ||
+    if (!devoteeName || !form.phone) {
+      return false;
+    }
+    if (prasadam && (
       !form.streetAddress?.trim() ||
       !form.city?.trim() ||
       !form.state?.trim() ||
       !/^\d{6}$/.test(String(form.pincode || ""))
-    ) {
+    )) {
       return false;
     }
     if (!/^\d{10}$/.test(form.phone)) return false;
@@ -452,6 +478,7 @@ function BillingPage() {
     form.city,
     form.state,
     form.pincode,
+    prasadam,
     participants,
     puja?.id,
     puja?._id
@@ -504,7 +531,8 @@ function BillingPage() {
         selectedChadhava: selectedChadhava || null,
         addons: resolvedAddons,
         addonsTotal: computedAddonsTotal,
-        ...(prasadam && { prasadam: true, prasadamAmount }),
+        prasadam,
+        prasadamAmount,
       };
       pendingSaveInFlightRef.current = true;
       const req = axiosInstance
@@ -609,14 +637,13 @@ function BillingPage() {
       }
     }
 
-    // Validate required fields (Name hidden; Phone + full address fields required)
-    if (
-      !form.phone ||
+    // Delivery address is required only when the customer has selected Prasadam.
+    if (!form.phone || (prasadam && (
       !form.streetAddress?.trim() ||
       !form.city?.trim() ||
       !form.state?.trim() ||
       !String(form.pincode || "").trim()
-    ) {
+    ))) {
       showToast(t("billing.errFillRequired"));
       paymentStartedRef.current = false;
       return;
@@ -628,7 +655,7 @@ function BillingPage() {
       paymentStartedRef.current = false;
       return;
     }
-    if (!/^\d{6}$/.test(String(form.pincode || ""))) {
+    if (prasadam && !/^\d{6}$/.test(String(form.pincode || ""))) {
       showToast(t("billing.errPincode"));
       paymentStartedRef.current = false;
       return;
@@ -684,7 +711,8 @@ function BillingPage() {
         addons: resolvedAddons,
         addonsTotal: computedAddonsTotal,
 
-        ...(prasadam && { prasadam: true, prasadamAmount }),
+        prasadam,
+        prasadamAmount,
       };
 
       const res = await axiosInstance.post(bookingBasePath, payload, {
@@ -797,7 +825,7 @@ function BillingPage() {
       name: form.name?.trim() || participants[0]?.name?.trim() || "",
       email: form.email || "",
       phone: form.phone,
-      address: composedAddress || "",
+      ...(prasadam && { address: composedAddress }),
     },
     participants: participants.map((p) => ({
       name: p.name || "",
@@ -1570,7 +1598,10 @@ function BillingPage() {
               type="checkbox"
               checked={prasadam}
               disabled={isSpecialCouponApplied}
-              onChange={(e) => setPrasadam(e.target.checked)}
+              onChange={(e) => {
+                setPrasadam(e.target.checked);
+                if (!e.target.checked) setToast((previous) => ({ ...previous, show: false }));
+              }}
             />
             <span>
               {isChadhavaFlow
@@ -1604,6 +1635,16 @@ function BillingPage() {
         <div className="participants-section">
           <h3>{t("billing.participantDetails")}</h3>
 
+          {usesSharedGotra && (
+            <div className="participant-card">
+              <input
+                placeholder={t("billing.gotra")}
+                value={sharedGotra}
+                onChange={(e) => setSharedGotra(e.target.value)}
+              />
+            </div>
+          )}
+
           {participants.map((p, index) => (
             <div key={index} className="participant-card">
               <h4>{t("billing.participantN", { n: index + 1 })}</h4>
@@ -1616,13 +1657,15 @@ function BillingPage() {
                 }
                 required
               />
-              <input
-                placeholder={t("billing.gotra")}
-                value={p.gotra}
-                onChange={(e) =>
-                  handleParticipantChange(index, "gotra", e.target.value)
-                }
-              />
+              {!usesSharedGotra && (
+                <input
+                  placeholder={t("billing.gotra")}
+                  value={p.gotra}
+                  onChange={(e) =>
+                    handleParticipantChange(index, "gotra", e.target.value)
+                  }
+                />
+              )}
             </div>
           ))}
         </div>
@@ -1653,37 +1696,39 @@ function BillingPage() {
             maxLength={10}
             pattern="\d{10}"
           />
-          <input
-            name="streetAddress"
-            placeholder={t("billing.address")}
-            value={form.streetAddress}
-            onChange={handleChange}
-            required
-          />
-          <input
-            name="city"
-            placeholder={t("billing.city")}
-            value={form.city}
-            onChange={handleChange}
-            required
-          />
-          <input
-            name="state"
-            placeholder={t("billing.state")}
-            value={form.state}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="pincode"
-            placeholder={t("billing.pincode")}
-            value={form.pincode}
-            onChange={handleChange}
-            maxLength={6}
-            pattern="\d{6}"
-            required
-          />
+          {prasadam && <>
+            <input
+              name="streetAddress"
+              placeholder={t("billing.address")}
+              value={form.streetAddress}
+              onChange={handleChange}
+              required
+            />
+            <input
+              name="city"
+              placeholder={t("billing.city")}
+              value={form.city}
+              onChange={handleChange}
+              required
+            />
+            <input
+              name="state"
+              placeholder={t("billing.state")}
+              value={form.state}
+              onChange={handleChange}
+              required
+            />
+            <input
+              type="text"
+              name="pincode"
+              placeholder={t("billing.pincode")}
+              value={form.pincode}
+              onChange={handleChange}
+              maxLength={6}
+              pattern="\d{6}"
+              required
+            />
+          </>}
         </div>
 
         <button
