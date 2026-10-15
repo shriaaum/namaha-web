@@ -6,6 +6,7 @@ import { localizeHeroBanner } from "../../i18n/content";
 import { optimizedImage, optimizedSrcSet } from "../../lib/img";
 import { takeHeroBannerPrefetch } from "../../lib/prefetch";
 import { useAutoplay } from "../../lib/useAutoplay";
+import { markHeroImageReady } from "../../lib/heroReady";
 import "./Home.css";
 
 const HERO_WIDTHS = [480, 640, 960, 1280];
@@ -35,12 +36,13 @@ const extractSlides = (data) =>
               ? [data]
               : [];
 
-const HeroSlide = memo(function HeroSlide({ slide, active, priority, onImageLoad }) {
+const HeroSlide = memo(function HeroSlide({ slide, index, active, priority, onImageLoad }) {
   const isStatic = slide.isStatic;
   return (
     <div
       className={`hero-modern-slide ${active ? "hero-modern-slide-active" : ""}`}
       aria-hidden={isStatic || undefined}
+      data-slide-index={index}
     >
       <div className="hero-modern-inner">
         <div className="hero-modern-content">
@@ -155,7 +157,10 @@ function Home() {
 
         if (!mounted) return;
         setRawSlides(activeSlides);
+        // No hero image to wait for: let the rest of the page load its images.
+        if (!activeSlides.some((s) => s.image || s.images?.[0])) markHeroImageReady();
       } catch {
+        markHeroImageReady();
         if (!mounted) return;
         setRawSlides([]);
       }
@@ -176,16 +181,29 @@ function Home() {
   }, [heroSlides.length]);
 
   const slideCount = heroSlides.length;
-  const advance = useCallback(
-    () => setActiveSlide((prev) => (slideCount ? (prev + 1) % slideCount : 0)),
-    [slideCount]
-  );
+  const activeSlideRef = useRef(activeSlide);
+  activeSlideRef.current = activeSlide;
+  // Rotate only to a slide whose image has finished loading, so the image box is
+  // never shown blank; otherwise make sure it is mounted and try on the next tick.
+  const advance = useCallback(() => {
+    if (!slideCount) return;
+    const next = (activeSlideRef.current + 1) % slideCount;
+    const img = carouselRef.current?.querySelector(`[data-slide-index="${next}"] img`);
+    if (!img || !img.complete) {
+      setMountedSlides((n) => Math.max(n, next + 1));
+      return;
+    }
+    setActiveSlide(next);
+  }, [slideCount]);
   useAutoplay(carouselRef, advance, 5000, {
     enabled: firstPainted && slideCount > 1,
     startDelayMs: 3000,
   });
 
-  const onFirstImageLoad = useCallback(() => setFirstPainted(true), []);
+  const onFirstImageLoad = useCallback(() => {
+    setFirstPainted(true);
+    markHeroImageReady();
+  }, []);
 
   // Warm up the next slide ~1 s after the first paint (first rotation is at 3 s),
   // then always keep the slide after the active one mounted.
@@ -215,6 +233,7 @@ function Home() {
                     <HeroSlide
                       key={slide.id}
                       slide={slide}
+                      index={index}
                       active={index === activeSlide}
                       priority={index === 0}
                       onImageLoad={onFirstImageLoad}

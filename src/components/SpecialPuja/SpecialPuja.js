@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./SpecialPuja.css";
 import "../PujaList/PujaList.css";
@@ -9,6 +9,7 @@ import {
 } from "../../data/pujaList";
 import { useTranslation } from 'react-i18next';
 import { cardImageProps } from "../../lib/img";
+import { heroImageReady } from "../../lib/heroReady";
 
 /** Same as PujaList: trust API-mapped `isPastEvent` when boolean; else policy + date via `isPujaUserSoldOut`. */
 const isPujaPastEvent = (puja) =>
@@ -37,6 +38,16 @@ const sortByAvailabilityThenDate = (a, b) => {
 
 function SpecialPuja() {
   const { t } = useTranslation();
+  // Card banners start downloading once the home hero image is done (max 15 s),
+  // so on slow connections they don't share bandwidth with the hero.
+  const [heroDone, setHeroDone] = useState(false);
+  useEffect(() => {
+    let active = true;
+    heroImageReady.then(() => active && setHeroDone(true));
+    return () => {
+      active = false;
+    };
+  }, []);
   // usePujaList re-maps already-fetched records on language change.
   const { pujas: apiPujas, loading, error } = usePujaList();
   const navigate = useNavigate();
@@ -104,7 +115,7 @@ function SpecialPuja() {
             >
               {/* ✅ USE API IMAGES */}
               <div className={`pl-card-banner ${puja.imageClass}`}>
-                {puja.bannerUrls?.[0] && (
+                {heroDone && puja.bannerUrls?.[0] && (
                   <img
                     {...cardImageProps(puja.bannerUrls[0].url, puja.bannerUrls[0].variants)}
                     width="400"

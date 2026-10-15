@@ -60,21 +60,28 @@
           var img0 = first.images && first.images[0];
           var src = first.image || (img0 && img0.url) || img0;
           var variants = img0 && img0.url === src ? img0.variants : null;
-          if (!variants || typeof src !== 'string') return;
-          var widths = Object.keys(variants).map(Number).filter(function (n) { return n && variants[n]; }).sort(function (a, b) { return a - b; });
-          if (!widths.length) return;
+          if (typeof src !== 'string') return;
+          var widths = variants ? Object.keys(variants).map(Number).filter(function (n) { return n && variants[n]; }).sort(function (a, b) { return a - b; }) : [];
           var link = document.createElement('link');
           link.rel = 'preload';
           link.as = 'image';
           link.setAttribute('fetchpriority', 'high');
-          // Same candidates as optimizedSrcSet() in src/lib/img.js: variants, plus the
-          // original at the next width step when variants stop below it.
-          var candidates = widths.map(function (n) { return variants[n] + ' ' + n + 'w'; });
-          var next = [400, 640, 960, 1280].filter(function (n) { return n > widths[widths.length - 1]; })[0];
-          if (next) candidates.push(src + ' ' + next + 'w');
-          link.setAttribute('imagesrcset', candidates.join(', '));
-          link.setAttribute('imagesizes', '(max-width: 900px) 320px, (max-width: 1024px) 420px, (min-width: 1025px) clamp(420px, min(48vw, 52vmin), 1000px), 52vmin');
-          link.href = variants[widths.filter(function (n) { return n >= 640; })[0] || widths[widths.length - 1]];
+          if (!widths.length) {
+            // No resized copies: Home.js shows the original URL as-is (src only, no
+            // srcset), so preload exactly that. Cloudinary URLs are transformed by
+            // Home.js, so they are left to the <img>.
+            if (/res\.cloudinary\.com/.test(src)) return;
+            link.href = src;
+          } else {
+            // Same candidates as optimizedSrcSet() in src/lib/img.js: variants, plus the
+            // original at the next width step when variants stop below it.
+            var candidates = widths.map(function (n) { return variants[n] + ' ' + n + 'w'; });
+            var next = [400, 640, 960, 1280].filter(function (n) { return n > widths[widths.length - 1]; })[0];
+            if (next) candidates.push(src + ' ' + next + 'w');
+            link.setAttribute('imagesrcset', candidates.join(', '));
+            link.setAttribute('imagesizes', '(max-width: 900px) 320px, (max-width: 1024px) 420px, (min-width: 1025px) clamp(420px, min(48vw, 52vmin), 1000px), 52vmin');
+            link.href = variants[widths.filter(function (n) { return n >= 640; })[0] || widths[widths.length - 1]];
+          }
           document.head.appendChild(link);
         }).catch(function () {});
       })(window);
