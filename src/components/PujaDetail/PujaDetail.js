@@ -5,6 +5,7 @@ import { getPujaById, isPujaUserSoldOut } from "../../data/pujaList";
 import { optimizedImage, optimizedSrcSet } from "../../lib/img";
 import "./PujaDetail.css";
 import Footer from "../Footer/Footer";
+import { setExitIntentContext } from "../../lib/exitIntentContext";
 
 const renderRichText = (text) => {
   if (!text || typeof text !== "string") return null;
@@ -209,6 +210,9 @@ function PujaDetail() {
   const aboutTextRef = useRef(null);
 
   const slides = puja?.bannerUrls?.map((img) => img.url) || [];
+  useEffect(() => {
+    if (puja) setExitIntentContext({ pageType: "puja", poojaId: puja._id || puja.id, itemTitle: puja.name || puja.title, amount: selectedPackage?.price || 0 });
+  }, [puja, selectedPackage]);
 
   const isBookingBlocked = useMemo(
     () => (puja ? isPujaUserSoldOut(puja) : false),

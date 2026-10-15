@@ -6,6 +6,7 @@ import { loadScript } from "../../lib/loadScript";
 import { localizePujaRecord } from "../../i18n/content";
 import { translateCmsText } from "../../i18n/cmsText";
 import Footer from "../Footer/Footer";
+import { setExitIntentContext, markBookingCompleted } from "../../lib/exitIntentContext";
 import "./BillingPage.css";
 
 // Loaded only on this page (not globally in index.html).
@@ -45,6 +46,9 @@ function BillingPage() {
   const isChadhavaFlow =
     String(pujaMode || "").toLowerCase() === "chadhava" ||
     String(selectedPackage?.id || "").toLowerCase() === "chadhava-offerings";
+  useEffect(() => {
+    setExitIntentContext({ pageType: "billing", poojaId: puja?._id || puja?.id, chadhavaId: selectedChadhava?._id || selectedChadhava?.id, itemTitle: puja?.name || puja?.title || selectedChadhava?.title || selectedChadhava?.name, amount: grandTotal || selectedPackage?.price || 0 });
+  }, [puja, selectedChadhava, selectedPackage, grandTotal]);
 
   // Support multiple coupons (array) and legacy single coupon
   const hasCoupons =
@@ -873,6 +877,7 @@ function BillingPage() {
       grandTotal: payload.grandTotal,
     };
     setInvoiceData(invoice);
+    markBookingCompleted();
     setShowInvoiceModal(true);
     setPendingBookingId(null);
     clearPendingRazorpayOrderId();

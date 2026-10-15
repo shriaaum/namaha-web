@@ -20,6 +20,7 @@ const BillingPage    = lazy(() => import('./components/BillingPage/BillingPage')
 const MyBookings     = lazy(() => import('./components/MyBooking/MyBooking'));
 const BookingDetailsModal = lazy(() => import('./components/BookingDetailsModal/BookingDetailsModal'));
 const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB'));
+const ExitIntentPopup = lazy(() => import('./components/ExitIntentPopup/ExitIntentPopup'));
 
 // Placeholder for below-the-fold home sections while their chunk loads.
 const SectionSkeleton = () => <div aria-hidden="true" style={{ minHeight: 320 }} />;
@@ -36,6 +37,7 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={null}>
         <WhatsAppFAB />
+        <ExitIntentPopup />
       </Suspense>
       <Routes>
         <Route path="/login" element={
