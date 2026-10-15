@@ -14,6 +14,9 @@ const isCloudinary = (url) => CLOUDINARY_UPLOAD.test(url);
 const cloudinaryAt = (url, width) =>
   url.replace(CLOUDINARY_UPLOAD, (_, base, rest) => `${base}f_auto,q_auto,c_limit,w_${width}/${rest}`);
 
+// Widths the API generates (namaha-api src/utils/imageVariants.js), never upscaled.
+const VARIANT_STEPS = [400, 640, 960, 1280];
+
 const variantWidths = (variants) =>
   variants && typeof variants === "object"
     ? Object.keys(variants)
@@ -47,7 +50,13 @@ export function optimizedSrcSet(url, widths, variants) {
   const available = variantWidths(variants);
   if (!available.length) return undefined;
   // Use the real variant widths so the browser's choice is accurate.
-  return available.map((w) => `${variants[w]} ${w}w`).join(", ");
+  const candidates = available.map((w) => `${variants[w]} ${w}w`);
+  // Variants stop below the next step only when the original is narrower than that
+  // step, so the original is then a small, full-quality candidate for high-density
+  // screens (no sharpness lost versus serving the original).
+  const next = VARIANT_STEPS.find((w) => w > available[available.length - 1]);
+  if (next) candidates.push(`${url} ${next}w`);
+  return candidates.join(", ");
 }
 
 // Puja / Chadhava card banners: 1 column on phones, 2 on tablets, 4 on desktop.

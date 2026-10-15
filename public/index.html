@@ -67,7 +67,12 @@
           link.rel = 'preload';
           link.as = 'image';
           link.setAttribute('fetchpriority', 'high');
-          link.setAttribute('imagesrcset', widths.map(function (n) { return variants[n] + ' ' + n + 'w'; }).join(', '));
+          // Same candidates as optimizedSrcSet() in src/lib/img.js: variants, plus the
+          // original at the next width step when variants stop below it.
+          var candidates = widths.map(function (n) { return variants[n] + ' ' + n + 'w'; });
+          var next = [400, 640, 960, 1280].filter(function (n) { return n > widths[widths.length - 1]; })[0];
+          if (next) candidates.push(src + ' ' + next + 'w');
+          link.setAttribute('imagesrcset', candidates.join(', '));
           link.setAttribute('imagesizes', '(max-width: 900px) 320px, (max-width: 1024px) 420px, (min-width: 1025px) clamp(420px, min(48vw, 52vmin), 1000px), 52vmin');
           link.href = variants[widths.filter(function (n) { return n >= 640; })[0] || widths[widths.length - 1]];
           document.head.appendChild(link);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getPujaById, isPujaUserSoldOut } from "../../data/pujaList";
+import { optimizedImage, optimizedSrcSet } from "../../lib/img";
 import "./PujaDetail.css";
 import Footer from "../Footer/Footer";
 
@@ -429,7 +430,10 @@ function PujaDetail() {
                     }`}
                   >
                     <img
-                      src={imgUrl}
+                      // Resized WebP copies when the API provides `variants`; otherwise the original.
+                      src={optimizedImage(imgUrl, 960, puja.bannerUrls?.[i]?.variants)}
+                      srcSet={optimizedSrcSet(imgUrl, [640, 960, 1280], puja.bannerUrls?.[i]?.variants)}
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       alt={t("pujaDetail.slideAlt", { number: i + 1 })}
                       className="pd-carousel-image"
                       loading={i === 0 ? "eager" : "lazy"}

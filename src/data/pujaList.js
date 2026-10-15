@@ -151,12 +151,14 @@ const getChadhavaItemEventDateRaw = (item) => {
   return getEventDateTimeRawInIST(raw, item.eventTime);
 };
 
-const mergeMatchedChadhavaOfferings = async (puja) => {
+// `chadhavaListRequest` (optional) is an already-started GET /chadhava, so the
+// puja and chadhava requests run in parallel instead of one after the other.
+const mergeMatchedChadhavaOfferings = async (puja, chadhavaListRequest) => {
   const pujaNameKey = normalizeCompareText(puja?.title || puja?.name);
   if (!pujaNameKey) return puja;
 
   try {
-    const res = await axiosInstance.get("/chadhava");
+    const res = await (chadhavaListRequest || axiosInstance.get("/chadhava"));
     const chadhavaItems = getItemsFromChadhavaResponse(res?.data);
     if (!chadhavaItems.length) return puja;
 
@@ -513,6 +515,9 @@ export function usePujaList() {
 ===================================================== */
 export const fetchPujaById = async (id) => {
   if (!id) return null;
+  // Start the chadhava list (needed for the add-on merge) alongside the puja request.
+  const chadhavaListRequest = axiosInstance.get("/chadhava");
+  chadhavaListRequest.catch(() => {}); // handled inside the merge; avoid unhandled-rejection noise
   try {
     const response = await axiosInstance.get(`/pooja/${id}`);
     const raw = response.data;
@@ -524,7 +529,7 @@ export const fetchPujaById = async (id) => {
     const arr = Array.isArray(apiPuja) ? apiPuja : [apiPuja];
     const mapped = arr.map(mapApiPujaToPUJA_LIST);
     if (!mapped[0]) return null;
-    return await mergeMatchedChadhavaOfferings(mapped[0]);
+    return await mergeMatchedChadhavaOfferings(mapped[0], chadhavaListRequest);
   } catch (error) {
     if (error?.response?.status === 404) return null;
     console.error("fetchPujaById failed:", error);

@@ -7,6 +7,7 @@ import { localizeChadhava } from '../../i18n/cmsText';
 import { getDateLocale } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
+import { optimizedImage, optimizedSrcSet } from '../../lib/img';
 
 const renderRichText = (text) => {
   if (!text || typeof text !== 'string') return null;
@@ -460,10 +461,14 @@ function ChadhavaDetail() {
                   <div className="chd-hero-inner">
                     {detail.bannerImage ? (
                       <img
-                        src={detail.bannerImage}
+                        // Resized WebP copies when the API provides variants; otherwise the original.
+                        src={optimizedImage(detail.bannerImage, 960, detail.bannerImageVariants)}
+                        srcSet={optimizedSrcSet(detail.bannerImage, [640, 960, 1280], detail.bannerImageVariants)}
+                        sizes="(max-width: 768px) 100vw, 50vw"
                         alt={view.title || t('nav.chadhava')}
                         className="chd-hero-image"
                         loading="eager"
+                        fetchpriority="high"
                         decoding="async"
                       />
                     ) : (
