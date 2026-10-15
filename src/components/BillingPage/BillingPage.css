@@ -157,13 +157,6 @@
   .participant-card input + input {
     margin-top: 10px;
   }
-  .billing-dakshina-section { margin-top: 18px; }
-  .billing-dakshina-section h4 { margin: 0 0 6px; }
-  .billing-dakshina-section p { margin: 0 0 10px; color: #64748b; font-size: .9rem; }
-  .billing-dakshina-options { display: flex; flex-wrap: wrap; gap: 8px; }
-  .billing-dakshina-options button { width: auto; margin: 0; padding: 8px 12px; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; font-size: .9rem; }
-  .billing-dakshina-options button.active { background: #ea580c; color: #fff; border-color: #ea580c; }
-  .billing-dakshina-section input { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
   
   /* BUTTON */
   button {

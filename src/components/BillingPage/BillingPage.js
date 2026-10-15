@@ -13,7 +13,6 @@ import "./BillingPage.css";
 const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 const CHADHAVA_PRASADAM_PRICE = 250;
-const DAKSHINA_OPTIONS = [51, 101, 251, 501];
 
 function BillingPage() {
   const { t, i18n } = useTranslation();
@@ -167,9 +166,6 @@ function BillingPage() {
   const passedGrandTotal = parseAmount(grandTotal);
 
   const [prasadam, setPrasadam] = useState(location.state?.prasadam ?? false);
-  const [dakshinaSelection, setDakshinaSelection] = useState("0");
-  const [customDakshina, setCustomDakshina] = useState("");
-  const dakshinaAmount = useMemo(() => Math.max(0, Math.floor(Number(dakshinaSelection === "custom" ? customDakshina : dakshinaSelection) || 0)), [dakshinaSelection, customDakshina]);
 
   /** Chadhava flow: prasadam is a paid add-on (₹250); Puja flow: prasadam remains free. */
   const prasadamAmount = useMemo(
@@ -258,7 +254,7 @@ function BillingPage() {
 
   const couponApplied = appliedCoupon != null;
   const isSpecialCouponApplied = couponApplied && Boolean(appliedCoupon?.specialCoupon);
-  const finalPayable = (couponApplied ? finalAmount : Math.max(subtotal, 0)) + dakshinaAmount;
+  const finalPayable = couponApplied ? finalAmount : Math.max(subtotal, 0);
 
   useEffect(() => {
     if (isSpecialCouponApplied && prasadam) setPrasadam(false);
@@ -535,7 +531,6 @@ function BillingPage() {
         selectedChadhava: selectedChadhava || null,
         addons: resolvedAddons,
         addonsTotal: computedAddonsTotal,
-        dakshinaAmount,
         prasadam,
         prasadamAmount,
       };
@@ -595,7 +590,6 @@ function BillingPage() {
     resolvedAddons,
     prasadam,
     prasadamAmount,
-    dakshinaAmount,
     bookingBasePath,
     authToken,
     composedAddress,
@@ -641,12 +635,6 @@ function BillingPage() {
       } catch {
         // ignore; Pay click can still create a pending booking + order
       }
-    }
-
-    if (dakshinaSelection === "custom" && dakshinaAmount < 1) {
-      showToast(t("dakshina.invalidAmount"));
-      paymentStartedRef.current = false;
-      return;
     }
 
     // Delivery address is required only when the customer has selected Prasadam.
@@ -722,7 +710,6 @@ function BillingPage() {
         selectedChadhava: selectedChadhava || null,
         addons: resolvedAddons,
         addonsTotal: computedAddonsTotal,
-        dakshinaAmount,
 
         prasadam,
         prasadamAmount,
@@ -863,7 +850,6 @@ function BillingPage() {
     addonsTotal: computedAddonsTotal,
     prasadam,
     prasadamAmount,
-    dakshinaAmount,
   });
 
   const handlePostPaymentSuccess = async ({ finalOrderId, payload }) => {
@@ -911,7 +897,6 @@ function BillingPage() {
       packagePrice: selectedPackage?.price,
       addons: resolvedAddons || [],
       addonsTotal: computedAddonsTotal,
-    dakshinaAmount,
       prasadam,
       prasadamAmount,
       coupon: payload.coupon,
@@ -1186,7 +1171,6 @@ function BillingPage() {
       packageName,
       packagePrice,
       addons,
-      dakshinaAmount,
       prasadam,
       prasadamAmount,
       coupon,
@@ -1212,11 +1196,6 @@ function BillingPage() {
     const prasadamRow =
       prasadam && (prasadamAmount || 0) > 0
         ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Prasadam</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${prasadamAmount}</td></tr>`
-        : "";
-
-    const dakshinaRow =
-      (dakshinaAmount || 0) > 0
-        ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Dakshina for Pujari</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${dakshinaAmount}</td></tr>`
         : "";
 
     const couponRow =
@@ -1303,7 +1282,6 @@ function BillingPage() {
                   ${pkgRow}
                   ${addonsRows}
                   ${prasadamRow}
-                  ${dakshinaRow}
                   ${couponRow}
                 </tbody>
               </table>
@@ -1645,18 +1623,6 @@ function BillingPage() {
               <span className="addons-total-price">₹{prasadamAmount}</span>
             </div>
           )}
-
-          <div className="billing-dakshina-section">
-            <h4>{t("dakshina.title")}</h4>
-            <p>{t("dakshina.hint")}</p>
-            <div className="billing-dakshina-options">
-              <button type="button" className={dakshinaSelection === "0" ? "active" : ""} onClick={() => setDakshinaSelection("0")}>{t("dakshina.none")}</button>
-              {DAKSHINA_OPTIONS.map((amount) => <button type="button" key={amount} className={dakshinaSelection === String(amount) ? "active" : ""} onClick={() => setDakshinaSelection(String(amount))}>₹{amount}</button>)}
-              <button type="button" className={dakshinaSelection === "custom" ? "active" : ""} onClick={() => setDakshinaSelection("custom")}>{t("dakshina.custom")}</button>
-            </div>
-            {dakshinaSelection === "custom" && <input type="number" min="1" step="1" inputMode="numeric" placeholder={t("dakshina.customPlaceholder")} value={customDakshina} onChange={(e) => setCustomDakshina(e.target.value.replace(/[^\d]/g, ""))} />}
-          </div>
-          {dakshinaAmount > 0 && <div className="addons-total-row"><span className="addons-total-label">{t("dakshina.title")}:</span><span className="addons-total-price">₹{dakshinaAmount}</span></div>}
 
           {/* ✅ GRAND TOTAL */}
           <div className="grand-total-row">
