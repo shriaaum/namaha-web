@@ -2,10 +2,14 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { loadScript } from "../../lib/loadScript";
 import { localizePujaRecord } from "../../i18n/content";
 import { translateCmsText } from "../../i18n/cmsText";
 import Footer from "../Footer/Footer";
 import "./BillingPage.css";
+
+// Loaded only on this page (not globally in index.html).
+const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 const CHADHAVA_PRASADAM_PRICE = 250;
 
@@ -17,6 +21,11 @@ function BillingPage() {
   // Always start Billing page at top (avoid opening scrolled down)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  // Warm up Razorpay while the user reviews the order; loadRazorpay awaits it anyway.
+  useEffect(() => {
+    loadScript(RAZORPAY_CHECKOUT_SRC).catch(() => {});
   }, []);
 
   // ✅ Destructure values passed from PujaDetail navigate state (no pandit/slot/location)
@@ -704,7 +713,7 @@ function BillingPage() {
             ? Math.round(backendAmountRupees * 100)
             : null;
       if (res.data.success && orderId) {
-        loadRazorpay(
+        await loadRazorpay(
           orderId,
           finalPayable,
           backendOrderAmountPaise
@@ -930,7 +939,14 @@ function BillingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional narrow deps for recovery
   }, [puja?.id, puja?._id]);
 
-  const loadRazorpay = (orderId, amount, backendOrderAmountPaise = null) => {
+  const loadRazorpay = async (orderId, amount, backendOrderAmountPaise = null) => {
+    if (!window.Razorpay) {
+      try {
+        await loadScript(RAZORPAY_CHECKOUT_SRC);
+      } catch (err) {
+        console.error(err);
+      }
+    }
     if (!window.Razorpay) {
       showToast(t("billing.errRazorpaySdk"));
       return;

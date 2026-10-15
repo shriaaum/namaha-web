@@ -126,7 +126,15 @@ function LoginPage() {
     <main className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <img src="/logo.png" alt="Shri AAUM" className="login-logo" />
+          <img
+            src="/logo-128.webp"
+            srcSet="/logo-128.webp 1x, /logo-256.webp 2x"
+            width="56"
+            height="72"
+            alt="Shri AAUM"
+            className="login-logo"
+            decoding="async"
+          />
           <h1>{t('auth.welcome')}</h1>
           <p>
             {location.state?.returnTo === '/billing'

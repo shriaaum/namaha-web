@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import i18nInstance from '../../i18n';
 import { localizeChadhava } from '../../i18n/cmsText';
 import { getDateLocale } from '../../i18n/content';
+import { cardImageProps } from '../../lib/img';
 
 const INITIAL_VISIBLE_CARDS = 4;
 const LOAD_MORE_STEP = 4;
@@ -42,6 +43,7 @@ const normalizeCard = (rawItem = {}) => {
     soldTagPolicy,
     description: item.description || i18nInstance.t('chadhava.detailsSoon'),
     bannerImage: item.bannerImage || item.image || item.thumbnail || '',
+    bannerImageVariants: item.bannerImage ? item.bannerImageVariants : undefined,
     buttonText: item.buttonText || item.ctaText || i18nInstance.t('common.viewDetails'),
   };
   return {
@@ -211,7 +213,9 @@ function Chadhava() {
                 <div className="ch-card-banner">
                   {card.bannerImage && (
                     <img
-                      src={card.bannerImage}
+                      {...cardImageProps(card.bannerImage, card.bannerImageVariants)}
+                      width="400"
+                      height="200"
                       alt=""
                       aria-hidden="true"
                       className="ch-banner-img-fade"

@@ -19,24 +19,61 @@
     <meta property="og:title" content="Shri Aaum - Sacred Pujas & Temple Rituals" />
     <meta property="og:description" content="Book sacred pujas at India's most revered temples. Qualified Veda Pandits. Get your family's names chanted. Prasad delivery." />
 
-    <link rel="icon" href="%PUBLIC_URL%/logo.png" type="image/png" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.png" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon-16.png" type="image/png" sizes="16x16" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon-180.png" sizes="180x180" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
-    <!-- Resource hints -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Resource hints: the API and image bucket are on the hero's critical path -->
+    <link rel="preconnect" href="https://api.shriaaum.com" crossorigin />
+    <link rel="preconnect" href="https://shriaaum.s3.ap-south-1.amazonaws.com" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <link rel="dns-prefetch" href="https://www.clarity.ms" />
-    <link rel="dns-prefetch" href="https://connect.facebook.net" />
-    <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
-
-    <!-- Google Fonts: preload then swap -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
 
     <title>shriaaum.com</title>
+
+    <!--
+      Start the hero-banner request while the HTML is still parsing (src/lib/prefetch.js
+      picks it up). No credentials or custom headers, so it is a simple CORS GET with
+      no preflight. Same base-URL rule as src/lib/instance.js.
+    -->
+    <script>
+      (function (w) {
+        if (w.location.pathname !== '/' || !w.fetch) return;
+        var local = w.location.hostname === 'localhost' || w.location.hostname === '127.0.0.1';
+        var prod = '%REACT_APP_API_URL%';
+        var localUrl = '%REACT_APP_API_URL_LOCAL%';
+        var base = local
+          ? (localUrl.indexOf('http') === 0 ? localUrl : 'http://localhost:8080/api')
+          : (prod.indexOf('http') === 0 ? prod : 'https://api.shriaaum.com/api');
+        w.__heroBannerPrefetch = fetch(base + '/hero-banner', { credentials: 'omit' })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+        w.__heroBannerPrefetch.catch(function () {});
+
+        // Preload the first slide's image before the JS bundle has run. Must pick the
+        // same slide and use the same srcset/sizes as components/Home/Home.js.
+        w.__heroBannerPrefetch.then(function (data) {
+          var slides = ((data && data.banners) || [])
+            .filter(function (s) { return s && s.isActive === true; })
+            .sort(function (a, b) { return new Date(a.createdAt || 0) - new Date(b.createdAt || 0); });
+          var first = slides.filter(function (s) { return s.image || (s.images && s.images[0]); })[0];
+          if (!first) return;
+          var img0 = first.images && first.images[0];
+          var src = first.image || (img0 && img0.url) || img0;
+          var variants = img0 && img0.url === src ? img0.variants : null;
+          if (!variants || typeof src !== 'string') return;
+          var widths = Object.keys(variants).map(Number).filter(function (n) { return n && variants[n]; }).sort(function (a, b) { return a - b; });
+          if (!widths.length) return;
+          var link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'image';
+          link.setAttribute('fetchpriority', 'high');
+          link.setAttribute('imagesrcset', widths.map(function (n) { return variants[n] + ' ' + n + 'w'; }).join(', '));
+          link.setAttribute('imagesizes', '(max-width: 900px) 320px, (max-width: 1024px) 420px, (min-width: 1025px) clamp(420px, min(48vw, 52vmin), 1000px), 52vmin');
+          link.href = variants[widths.filter(function (n) { return n >= 640; })[0] || widths[widths.length - 1]];
+          document.head.appendChild(link);
+        }).catch(function () {});
+      })(window);
+    </script>
 
     <!-- Structured data -->
     <script type="application/ld+json">
@@ -58,47 +95,62 @@
     }
     </script>
 
-    <!-- Analytics deferred until after page load — keeps FCP/LCP unblocked -->
+    <!--
+      Analytics: the queue stubs below are defined immediately (no network), so the
+      PageView and any early event are buffered exactly once. The tag scripts
+      themselves load on the first user interaction, or 5 s after window load.
+    -->
     <script>
-      window.addEventListener('load', function() {
-        // Google Tag Manager
-        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-        })(window,document,'script','dataLayer','GTM-K63LVQ7N');
+      (function (w, d) {
+        // Google Tag Manager + GA4 (gtag.js reads the same dataLayer queue)
+        w.dataLayer = w.dataLayer || [];
+        w.gtag = w.gtag || function () { w.dataLayer.push(arguments); };
+        w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        w.gtag('js', new Date());
+        w.gtag('config', 'G-FVH2V3JWMK');
 
-        // Google Analytics
-        var gaScript = document.createElement('script');
-        gaScript.async = true;
-        gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-FVH2V3JWMK';
-        document.head.appendChild(gaScript);
-        gaScript.onload = function() {
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-FVH2V3JWMK');
-        };
+        // Microsoft Clarity queue
+        w.clarity = w.clarity || function () { (w.clarity.q = w.clarity.q || []).push(arguments); };
 
-        // Microsoft Clarity
-        (function(c,l,a,r,i,t,y){
-          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window,document,"clarity","script","vtg20jgdg7");
+        // Meta Pixel queue (official stub, minus the script tag)
+        if (!w.fbq) {
+          var n = (w.fbq = function () {
+            n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+          });
+          if (!w._fbq) w._fbq = n;
+          n.push = n;
+          n.loaded = true;
+          n.version = '2.0';
+          n.queue = [];
+        }
+        w.fbq('init', '1451284920366881');
+        w.fbq('track', 'PageView');
 
-        // Meta Pixel
-        !function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window,document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '1451284920366881');
-        fbq('track', 'PageView');
-      });
+        function addScript(src) {
+          var s = d.createElement('script');
+          s.async = true;
+          s.src = src;
+          d.head.appendChild(s);
+        }
+
+        var loaded = false;
+        var triggers = ['scroll', 'click', 'keydown', 'touchstart', 'pointerdown'];
+        function loadTags() {
+          if (loaded) return;
+          loaded = true;
+          triggers.forEach(function (e) { w.removeEventListener(e, loadTags, true); });
+          addScript('https://www.googletagmanager.com/gtm.js?id=GTM-K63LVQ7N');
+          addScript('https://www.googletagmanager.com/gtag/js?id=G-FVH2V3JWMK');
+          addScript('https://www.clarity.ms/tag/vtg20jgdg7');
+          addScript('https://connect.facebook.net/en_US/fbevents.js');
+        }
+        triggers.forEach(function (e) {
+          w.addEventListener(e, loadTags, { capture: true, passive: true, once: true });
+        });
+        function armTimer() { setTimeout(loadTags, 5000); }
+        if (d.readyState === 'complete') armTimer();
+        else w.addEventListener('load', armTimer, { once: true });
+      })(window, document);
     </script>
   </head>
   <body translate="no">
@@ -108,8 +160,5 @@
 
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-
-    <!-- Razorpay loaded async — only needed at checkout -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
   </body>
 </html>

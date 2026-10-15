@@ -1,28 +1,9 @@
-/* Brand fonts from design system (falls back if local fonts are unavailable) */
-@font-face {
-  font-family: 'Namian';
-  src: local('Namian');
-  font-weight: 300 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Montage';
-  src: local('Montage');
-  font-weight: 400 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Legacy heading fallback */
-@font-face {
-  font-family: 'Touche Bold';
-  src: url('https://db.onlinewebfonts.com/t/6ff35b8857ed1d3bf6a3cc93164ff962.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
+/*
+ * Brand fonts: Namian / Montage are referenced by name in the stacks below, so they
+ * render when installed locally and fall back to system fonts otherwise. No web font
+ * files are downloaded (the old Google Poppins + onlinewebfonts "Touche Bold" links
+ * were never referenced by any rule and have been removed).
+ */
 
 :root {
   /*
@@ -232,4 +213,28 @@ select {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/*
+ * Touch targets: grow the clickable area of small controls to at least 44×44px
+ * with an invisible pseudo-element, without changing how they look.
+ */
+.hero-modern-dot,
+.faq-dot,
+.sp-view-all,
+.sp-cards .pl-card-participate {
+  position: relative;
+}
+
+.hero-modern-dot::before,
+.faq-dot::before,
+.sp-view-all::before,
+.sp-cards .pl-card-participate::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }

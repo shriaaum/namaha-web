@@ -668,10 +668,20 @@
   }
 }
 
-/* 🔥 Hide language selector on mobile */
+/* Language selector on phones: same pill as desktop, compact so it fits beside the logo,
+   profile and menu buttons (40px tall, matching their touch size) */
 @media (max-width: 768px) {
   .language-selector {
-    display: none;
+    flex-shrink: 0;
+    padding: 0 2px;
+    border-radius: 16px;
+  }
+
+  .language-selector select {
+    min-height: 40px;
+    max-width: 88px;
+    padding: 4px 18px 4px 8px;
+    font-size: 0.8rem;
   }
 }
 

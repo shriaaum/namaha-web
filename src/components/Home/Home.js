@@ -1,67 +1,149 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../../lib/instance";
 import { useTranslation } from 'react-i18next';
 import { localizeHeroBanner } from "../../i18n/content";
+import { optimizedImage, optimizedSrcSet } from "../../lib/img";
+import { takeHeroBannerPrefetch } from "../../lib/prefetch";
+import { useAutoplay } from "../../lib/useAutoplay";
 import "./Home.css";
+
+const HERO_WIDTHS = [480, 640, 960, 1280];
+// Mirrors .hero-modern-image-card in Home.css (≤320px on phones, 420px on tablets,
+// clamp(420px, min(48vw, 52vmin), 1000px) on desktop). The trailing 52vmin is a
+// fallback for browsers that cannot parse math functions in sizes.
+// Keep in sync with the hero preload in public/index.html (same slide choice + sizes).
+const HERO_SIZES =
+  "(max-width: 900px) 320px, (max-width: 1024px) 420px, (min-width: 1025px) clamp(420px, min(48vw, 52vmin), 1000px), 52vmin";
+
+const extractSlides = (data) =>
+  Array.isArray(data?.banners)
+    ? data.banners
+    : Array.isArray(data?.items)
+    ? data.items
+    : Array.isArray(data?.slides)
+      ? data.slides
+      : Array.isArray(data?.data?.banners)
+        ? data.data.banners
+      : Array.isArray(data?.data?.items)
+        ? data.data.items
+        : Array.isArray(data?.data?.slides)
+          ? data.data.slides
+          : Array.isArray(data)
+            ? data
+            : data && typeof data === "object"
+              ? [data]
+              : [];
+
+const HeroSlide = memo(function HeroSlide({ slide, active, priority, onImageLoad }) {
+  const isStatic = slide.isStatic;
+  return (
+    <div
+      className={`hero-modern-slide ${active ? "hero-modern-slide-active" : ""}`}
+      aria-hidden={isStatic || undefined}
+    >
+      <div className="hero-modern-inner">
+        <div className="hero-modern-content">
+          <div className="hero-modern-block">
+            <h1>{slide.title}</h1>
+            <p>{slide.description}</p>
+            <Link to={slide.ctaTo} className="hero-btn hero-btn-solid">
+              {slide.ctaLabel}
+            </Link>
+          </div>
+        </div>
+        <div className="hero-modern-images" aria-hidden="true">
+          <div className="hero-modern-image-card">
+            {isStatic ? null : (
+              <img
+                src={optimizedImage(slide.image, 640, slide.variants)}
+                srcSet={optimizedSrcSet(slide.image, HERO_WIDTHS, slide.variants)}
+                sizes={HERO_SIZES}
+                alt={slide.imageAlt}
+                className="hero-modern-image"
+                width="420"
+                height="420"
+                loading={priority ? "eager" : "lazy"}
+                decoding="async"
+                fetchpriority={priority ? "high" : "low"}
+                onLoad={priority ? onImageLoad : undefined}
+                onError={priority ? onImageLoad : undefined}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 function Home() {
   const { t, i18n } = useTranslation();
-  const trustStripItems = [
-    { id: 1, icon: 'shield', text: t('home.trustPandits') },
-    { id: 2, icon: 'shield', text: t('home.trustRecording') },
-    { id: 3, icon: 'shield', text: t('home.trustPrasad') },
-  ];
+  const trustStripItems = useMemo(
+    () => [
+      { id: 1, icon: 'shield', text: t('home.trustPandits') },
+      { id: 2, icon: 'shield', text: t('home.trustRecording') },
+      { id: 3, icon: 'shield', text: t('home.trustPrasad') },
+    ],
+    [t]
+  );
   const [activeSlide, setActiveSlide] = useState(0);
   const [rawSlides, setRawSlides] = useState([]);
+  // Autoplay starts once the first hero image has painted.
+  const [firstPainted, setFirstPainted] = useState(false);
+  // Slides (and their images) are mounted only shortly before they are shown:
+  // hidden slides sit inside the viewport, so loading="lazy" would not defer them.
+  const [mountedSlides, setMountedSlides] = useState(1);
+  const carouselRef = useRef(null);
 
   // Localize at render time so a language switch updates already-loaded banners.
   const heroSlides = useMemo(
     () =>
       rawSlides
         .map((s) => localizeHeroBanner(s, i18n.language))
-        .map((s, idx) => ({
-          id: String(s.slideId || s.id || s._id || `hero-${idx}`),
-          title: s.title || t('home.heroFallbackTitle'),
-          description: s.subtitle || s.description || "",
-          ctaLabel: s.ctaLabel || t('home.heroFallbackCta'),
-          ctaTo: s.ctaTo || "/",
-          image:
-            s.image ||
-            s.images?.[0]?.url ||
-            s.images?.[0] ||
-            "",
-          imageAlt: s.imageAlt || s.title || t('home.heroFallbackAlt'),
-        }))
+        .map((s, idx) => {
+          const primary = s.images?.[0];
+          const image = s.image || primary?.url || primary || "";
+          return {
+            id: String(s.slideId || s.id || s._id || `hero-${idx}`),
+            title: s.title || t('home.heroFallbackTitle'),
+            description: s.subtitle || s.description || "",
+            ctaLabel: s.ctaLabel || t('home.heroFallbackCta'),
+            ctaTo: s.ctaTo || "/",
+            image,
+            // Resized WebP copies generated by the API (only valid for the original image).
+            variants: primary?.url && primary.url === image ? primary.variants : undefined,
+            imageAlt: s.imageAlt || s.title || t('home.heroFallbackAlt'),
+          };
+        })
         .filter((s) => s.image),
     [rawSlides, i18n.language, t]
+  );
+
+  // Invisible placeholder (visibility: hidden in Home.css) rendered until the API
+  // slides arrive: it only reserves the hero's height so nothing below jumps.
+  // No placeholder text or image is ever shown.
+  const staticSlide = useMemo(
+    () => ({
+      id: "hero-static",
+      isStatic: true,
+      title: t('home.heroFallbackTitle'),
+      description: "",
+      ctaLabel: t('home.heroFallbackCta'),
+      ctaTo: "/puja",
+    }),
+    [t]
   );
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await axiosInstance.get("/hero-banner");
-        const data = res?.data;
-        const rawSlides = Array.isArray(data?.banners)
-          ? data.banners
-          : Array.isArray(data?.items)
-          ? data.items
-          : Array.isArray(data?.slides)
-            ? data.slides
-            : Array.isArray(data?.data?.banners)
-              ? data.data.banners
-            : Array.isArray(data?.data?.items)
-              ? data.data.items
-              : Array.isArray(data?.data?.slides)
-                ? data.data.slides
-                : Array.isArray(data)
-                  ? data
-                  : data && typeof data === "object"
-                    ? [data]
-                    : [];
+        const data =
+          (await takeHeroBannerPrefetch()) ??
+          (await axiosInstance.get("/hero-banner"))?.data;
 
-        const sortedSlides = [...rawSlides].sort((a, b) => {
+        const sortedSlides = [...extractSlides(data)].sort((a, b) => {
           const aTime = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
           const bTime = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
           return aTime - bTime; // oldest -> newest
@@ -93,66 +175,71 @@ function Home() {
     });
   }, [heroSlides.length]);
 
+  const slideCount = heroSlides.length;
+  const advance = useCallback(
+    () => setActiveSlide((prev) => (slideCount ? (prev + 1) % slideCount : 0)),
+    [slideCount]
+  );
+  useAutoplay(carouselRef, advance, 5000, {
+    enabled: firstPainted && slideCount > 1,
+    startDelayMs: 3000,
+  });
+
+  const onFirstImageLoad = useCallback(() => setFirstPainted(true), []);
+
+  // Warm up the next slide ~1 s after the first paint (first rotation is at 3 s),
+  // then always keep the slide after the active one mounted.
   useEffect(() => {
-    if (heroSlides.length <= 0) return undefined;
-    const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [heroSlides.length]);
+    if (!firstPainted) return undefined;
+    const timer = setTimeout(() => setMountedSlides((n) => Math.max(n, 2)), 1000);
+    return () => clearTimeout(timer);
+  }, [firstPainted]);
+  useEffect(() => {
+    if (activeSlide > 0) setMountedSlides((n) => Math.max(n, activeSlide + 2));
+  }, [activeSlide]);
+
+  const showStatic = slideCount === 0;
 
   return (
     <div className="App">
       <main>
         <div className="home-hero-viewport">
           {/* ================= HERO ================= */}
-          {heroSlides.length > 0 && (
-            <section id="home" className="hero-modern">
-              <div className="hero-modern-carousel">
-                {heroSlides.map((slide, index) => (
-                  <div
-                    key={slide.id}
-                    className={`hero-modern-slide ${index === activeSlide ? "hero-modern-slide-active" : ""}`}
-                  >
-                    <div className="hero-modern-inner">
-                      <div className="hero-modern-content">
-                        <div className="hero-modern-block">
-                          <h1>{slide.title}</h1>
-                          <p>{slide.description}</p>
-                          <Link to={slide.ctaTo} className="hero-btn hero-btn-solid">
-                            {slide.ctaLabel}
-                          </Link>
-                        </div>
-                      </div>
-                      <div className="hero-modern-images" aria-hidden="true">
-                        <div className="hero-modern-image-card">
-                          <img
-                            src={slide.image}
-                            alt={slide.imageAlt}
-                            className="hero-modern-image"
-                            loading={index === 0 ? "eager" : "lazy"}
-                            decoding={index === 0 ? "sync" : "async"}
-                            fetchpriority={index === 0 ? "high" : "low"}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          <section id="home" className={`hero-modern${showStatic ? " hero-modern--static" : ""}`}>
+            <div className="hero-modern-carousel" ref={carouselRef}>
+              {showStatic ? (
+                <HeroSlide slide={staticSlide} active priority />
+              ) : (
+                heroSlides.map((slide, index) =>
+                  index < mountedSlides || index === activeSlide ? (
+                    <HeroSlide
+                      key={slide.id}
+                      slide={slide}
+                      active={index === activeSlide}
+                      priority={index === 0}
+                      onImageLoad={onFirstImageLoad}
+                    />
+                  ) : null
+                )
+              )}
+              {slideCount > 0 && (
                 <div className="hero-modern-dots">
                   {heroSlides.map((slide, index) => (
                     <button
                       key={slide.id}
                       type="button"
                       className={`hero-modern-dot ${index === activeSlide ? "hero-modern-dot-active" : ""}`}
-                      onClick={() => setActiveSlide(index)}
+                      onClick={() => {
+                        setFirstPainted(true);
+                        setActiveSlide(index);
+                      }}
                       aria-label={t('home.showSlide', { title: slide.title })}
                     />
                   ))}
                 </div>
-              </div>
-            </section>
-          )}
+              )}
+            </div>
+          </section>
 
           {/* Trust strip */}
           <div className="trust-strip-wrap">

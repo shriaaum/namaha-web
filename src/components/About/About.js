@@ -15,7 +15,15 @@ function About() {
     <main className="about-page">
       <section className="about-hero">
         <div className="about-hero-inner">
-          <img src="/logo.png" alt={t('about.logoAlt')} className="about-logo" />
+          <img
+            src="/logo-128.webp"
+            srcSet="/logo-128.webp 1x, /logo-256.webp 2x"
+            width="56"
+            height="72"
+            alt={t('about.logoAlt')}
+            className="about-logo"
+            decoding="async"
+          />
           <h1>{t('about.title')}</h1>
           <p className="about-tagline">
             {t('about.tagline')}

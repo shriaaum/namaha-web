@@ -1137,3 +1137,29 @@
   }
 }
 
+
+/*
+ * Before /hero-banner responds, an invisible placeholder slide reserves the hero's
+ * height so the page below doesn't jump when the real slides arrive. Only the hero
+ * background is visible; no placeholder text or image is shown.
+ */
+.hero-modern--static .hero-modern-slide {
+  visibility: hidden;
+}
+
+@media (min-width: 1025px) {
+  /* Desktop cards are sized by their image; give the placeholder the real slide width */
+  .home-hero-viewport .hero-modern--static .hero-modern-image-card {
+    width: clamp(420px, min(48vw, 52vmin), 1000px);
+  }
+}
+
+.hero-modern--static .hero-modern-block p {
+  /* reserve ~3 lines for the banner subtitle that replaces it */
+  min-height: 4.65em;
+}
+
+/* Without a subtitle the carousel would shrink-wrap; keep the loaded slide's width */
+.hero-modern--static .hero-modern-carousel {
+  width: 100%;
+}

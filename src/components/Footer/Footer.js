@@ -48,7 +48,16 @@ function Footer() {
                 <div className="footer-top">
                     <div className="footer-col footer-brand">
                         <div className="footer-logo-wrap">
-                            <img src="/logo.png" alt={t('footer.logoAlt')} className="footer-logo" />
+                            <img
+                                src="/logo-64.webp"
+                                srcSet="/logo-64.webp 1x, /logo-128.webp 2x"
+                                width="56"
+                                height="72"
+                                alt={t('footer.logoAlt')}
+                                className="footer-logo"
+                                loading="lazy"
+                                decoding="async"
+                            />
                             <span className="footer-brand-name">{t('footer.brandName')}</span>
                         </div>
                         <div className="footer-desc">

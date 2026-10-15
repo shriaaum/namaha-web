@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAutoplay } from '../../lib/useAutoplay';
 import './Faqs.css';
 
 // Text lives in i18n under faqs.<key>Title / faqs.<key>Desc.
@@ -14,6 +15,7 @@ function Faqs() {
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const carouselRef = useRef(null);
 
   const goToSlide = (index) => {
     setActiveIndex((index + benefits.length) % benefits.length);
@@ -21,13 +23,9 @@ function Faqs() {
     setTimeout(() => setIsAutoPlaying(true), 4000);
   };
 
-  useEffect(() => {
-    if (!isAutoPlaying) return;
-    const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % benefits.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, [isAutoPlaying]);
+  // Paused while the tab is hidden or the carousel is off-screen.
+  const advance = useCallback(() => setActiveIndex((prev) => (prev + 1) % benefits.length), []);
+  useAutoplay(carouselRef, advance, 4500, { enabled: isAutoPlaying });
 
   return (
     <section className="faq-section">
@@ -36,7 +34,7 @@ function Faqs() {
           {t('faqs.heading')}
         </h2>
        
-        <div className="faq-carousel">
+        <div className="faq-carousel" ref={carouselRef}>
           {/* <button
             type="button"
             className="faq-carousel-btn faq-carousel-prev"

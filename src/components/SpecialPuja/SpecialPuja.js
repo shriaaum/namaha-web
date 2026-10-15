@@ -8,6 +8,7 @@ import {
   isPujaUserSoldOut,
 } from "../../data/pujaList";
 import { useTranslation } from 'react-i18next';
+import { cardImageProps } from "../../lib/img";
 
 /** Same as PujaList: trust API-mapped `isPastEvent` when boolean; else policy + date via `isPujaUserSoldOut`. */
 const isPujaPastEvent = (puja) =>
@@ -66,10 +67,12 @@ function SpecialPuja() {
   if (error) console.error("❌ SpecialPuja fetch failed:", error);
 
   if (loading) {
+    // In-flow placeholder (not the full-screen .pl-loading-overlay used on /puja):
+    // on the home page the hero must stay visible while pujas load.
     return (
-      <section className="special-puja-section" aria-busy="true">
+      <section className="special-puja-section" aria-busy="true" key="loading">
         <div className="sp-container">
-          <div className="pl-loading-overlay" role="status" aria-live="polite">
+          <div className="sp-loading" role="status" aria-live="polite">
             <div className="pl-loading-spinner" aria-hidden="true" />
             <div className="pl-loading-text">{t('common.loading')}</div>
           </div>
@@ -103,7 +106,9 @@ function SpecialPuja() {
               <div className={`pl-card-banner ${puja.imageClass}`}>
                 {puja.bannerUrls?.[0] && (
                   <img
-                    src={puja.bannerUrls[0].url}
+                    {...cardImageProps(puja.bannerUrls[0].url, puja.bannerUrls[0].variants)}
+                    width="400"
+                    height="200"
                     alt=""
                     aria-hidden="true"
                     className="pl-banner-img-fade"

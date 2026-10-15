@@ -172,9 +172,20 @@ function Layout({ children }) {
     }, [location.pathname]);
 
     useEffect(() => {
-        const handleScroll = () => setIsScrolled(window.scrollY > 10);
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        // Passive + one read per frame; setIsScrolled bails out when the value is unchanged.
+        let frame = 0;
+        const handleScroll = () => {
+            if (frame) return;
+            frame = requestAnimationFrame(() => {
+                frame = 0;
+                setIsScrolled(window.scrollY > 10);
+            });
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            cancelAnimationFrame(frame);
+        };
     }, []);
 
     // Close mobile hamburger menu when clicking anywhere outside header
@@ -243,7 +254,16 @@ function Layout({ children }) {
             <header className={`header ${isScrolled ? 'scrolled' : ''} ${menuOpen ? 'open' : ''}`}>
                 <nav className="nav-container">
                     <Link to="/" className="logo">
-                        <img src="/logo.png" alt="Shri AAUM" className="logo-img" />
+                        <img
+                            src="/logo-128.webp"
+                            srcSet="/logo-128.webp 1x, /logo-256.webp 2x"
+                            width="56"
+                            height="72"
+                            alt="Shri AAUM"
+                            className="logo-img"
+                            decoding="async"
+                            fetchpriority="high"
+                        />
                     </Link>
                     <ul className="nav-links">
                         <li className="nav-item-mobile-hide">

@@ -4,6 +4,7 @@ import "./PujaList.css";
 import Footer from "../Footer/Footer";
 import { usePujaList, isPujaUserSoldOut } from "../../data/pujaList";
 import { useTranslation } from 'react-i18next';
+import { cardImageProps } from "../../lib/img";
 
 const INITIAL_VISIBLE_CARDS = 4;
 const LOAD_MORE_STEP = 4;
@@ -139,7 +140,9 @@ function PujaList() {
               <div className={`pl-card-banner ${puja.imageClass}`}>
                 {puja.bannerUrls?.[0] && (
                   <img
-                    src={puja.bannerUrls[0].url}
+                    {...cardImageProps(puja.bannerUrls[0].url, puja.bannerUrls[0].variants)}
+                    width="400"
+                    height="200"
                     alt=""
                     aria-hidden="true"
                     className="pl-banner-img-fade"

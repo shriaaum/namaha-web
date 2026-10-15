@@ -16,8 +16,8 @@ COPY . .
 # Build React app
 RUN npm run build
 
-# Install serve to serve static files
-RUN npm install -g serve
+# Install serve to serve static files (gzip on by default; caching rules in public/serve.json)
+RUN npm install -g serve@14.2.4
 
 # Expose port
 EXPOSE 8080

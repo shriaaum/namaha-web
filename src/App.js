@@ -1,8 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import Layout from './components/Layout/Layout';
+// Home is eager: the hero is the LCP element and must not wait for a chunk.
+import Home from './components/Home/Home';
 
-const Home           = lazy(() => import('./components/Home/Home'));
 const SpecialPuja    = lazy(() => import('./components/SpecialPuja/SpecialPuja'));
 const WhatsAppUpdates = lazy(() => import('./components/WhatsAppUpdatesSection/WhatsAppUpdatesSection'));
 const Faqs           = lazy(() => import('./components/Faqs/Faqs'));
@@ -19,6 +20,9 @@ const BillingPage    = lazy(() => import('./components/BillingPage/BillingPage')
 const MyBookings     = lazy(() => import('./components/MyBooking/MyBooking'));
 const BookingDetailsModal = lazy(() => import('./components/BookingDetailsModal/BookingDetailsModal'));
 const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB'));
+
+// Placeholder for below-the-fold home sections while their chunk loads.
+const SectionSkeleton = () => <div aria-hidden="true" style={{ minHeight: 320 }} />;
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -42,11 +46,17 @@ function App() {
 
         <Route path="/" element={
           <Layout>
-            <Suspense fallback={<PageLoader />}>
-              <Home />
+            <Home />
+            <Suspense fallback={<SectionSkeleton />}>
               <SpecialPuja />
+            </Suspense>
+            <Suspense fallback={<SectionSkeleton />}>
               <WhatsAppUpdates />
+            </Suspense>
+            <Suspense fallback={<SectionSkeleton />}>
               <Faqs />
+            </Suspense>
+            <Suspense fallback={<SectionSkeleton />}>
               <Footer />
             </Suspense>
           </Layout>
