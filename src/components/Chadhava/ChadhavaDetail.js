@@ -8,6 +8,7 @@ import { getDateLocale } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
 import { optimizedImage, optimizedSrcSet } from '../../lib/img';
+import { setExitIntentContext } from '../../lib/exitIntentContext';
 
 const renderRichText = (text) => {
   if (!text || typeof text !== 'string') return null;
@@ -128,6 +129,7 @@ const SECTION_TABS = [
 ];
 
 function ChadhavaDetail() {
+  // Keep the exit popup aware of the item currently being viewed.
   const { id } = useParams();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -174,6 +176,9 @@ function ChadhavaDetail() {
 
   // Localized copy of the record for display; `detail`/`offerings` stay raw (English).
   const view = useMemo(() => localizeChadhava(detail, i18n.language), [detail, i18n.language]);
+  useEffect(() => {
+    if (detail) setExitIntentContext({ pageType: 'chadhava', chadhavaId: detail._id || detail.id || id, itemTitle: detail.title || detail.name, amount: 0 });
+  }, [detail, id]);
   const viewOfferings = useMemo(
     () => (Array.isArray(view?.offerings) ? view.offerings : offerings),
     [view, offerings]
