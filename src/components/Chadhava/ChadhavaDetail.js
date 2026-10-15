@@ -108,6 +108,17 @@ const getRatingAvatars = (id, count = 4) => {
 // FAQ text lives in i18n: chadhavaDetail.faq{n}q / chadhavaDetail.faq{n}a
 const FAQ_NUMBERS = [1, 2, 3, 4, 5, 6, 7];
 
+// Cart keys match the existing offering rows: `_id || id || index`.
+const offeringKey = (offering, index) => String(offering?._id || offering?.id || index);
+
+// Offerings have no availability flag; one is bookable when it has a title and a price.
+const isOfferingAvailable = (offering) =>
+  Boolean(offering && String(offering.title || '').trim()) && Number(offering.price) > 0;
+
+// Per-chadhava cart in sessionStorage, so returning from /billing (navigate(-1))
+// restores the user's selection instead of re-applying the default.
+const CART_STORAGE_PREFIX = 'shriaaum.chadhavaCart:';
+
 const SECTION_TABS = [
   { id: 'packages', labelKey: 'detailTabs.packages' },
   { id: 'benefits', labelKey: 'detailTabs.benefits' },
@@ -121,6 +132,8 @@ function ChadhavaDetail() {
   const { t, i18n } = useTranslation();
   const [activeFaq, setActiveFaq] = useState(null);
   const [cart, setCart] = useState({});
+  // True once the cart was restored or defaulted for the loaded chadhava.
+  const [cartReady, setCartReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
   const [offerings, setOfferings] = useState([]);
@@ -200,6 +213,8 @@ function ChadhavaDetail() {
     const getDetail = async () => {
       try {
         setLoading(true);
+        setCartReady(false);
+        setCart({});
         const res = await axiosInstance.get(`/chadhava/${encodeURIComponent(id)}`);
         const item = res?.data?.item || res?.data?.data?.item || res?.data?.data || res?.data;
         if (!mounted) return;
@@ -241,6 +256,49 @@ function ChadhavaDetail() {
   useEffect(() => {
     if (isBookingBlocked) setCart({});
   }, [isBookingBlocked]);
+
+  const cartStorageKey = `${CART_STORAGE_PREFIX}${detail?._id || detail?.id || id}`;
+  const firstAvailableIndex = useMemo(() => offerings.findIndex(isOfferingAvailable), [offerings]);
+
+  // Once per loaded chadhava: restore the saved selection, otherwise preselect
+  // the first available offering (qty 1). Never auto-selects when booking is closed.
+  useEffect(() => {
+    if (loading || !detail || cartReady) return;
+    if (isBookingBlocked) {
+      setCartReady(true);
+      return;
+    }
+    let saved = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(cartStorageKey) || 'null');
+    } catch {
+      saved = null;
+    }
+    if (saved && typeof saved.cart === 'object' && saved.cart !== null) {
+      const validKeys = new Set(
+        offerings.map((o, i) => (isOfferingAvailable(o) ? offeringKey(o, i) : null)).filter(Boolean)
+      );
+      const restored = {};
+      Object.entries(saved.cart).forEach(([key, qty]) => {
+        const n = Math.floor(Number(qty));
+        if (validKeys.has(key) && n > 0) restored[key] = n;
+      });
+      setCart(restored);
+    } else if (firstAvailableIndex >= 0) {
+      setCart({ [offeringKey(offerings[firstAvailableIndex], firstAvailableIndex)]: 1 });
+    }
+    setCartReady(true);
+  }, [loading, detail, cartReady, isBookingBlocked, cartStorageKey, offerings, firstAvailableIndex]);
+
+  // Remember every change (including an emptied cart) for this chadhava.
+  useEffect(() => {
+    if (!cartReady || isBookingBlocked) return;
+    try {
+      sessionStorage.setItem(cartStorageKey, JSON.stringify({ cart }));
+    } catch {
+      // storage unavailable (private mode): selection just won't survive navigation
+    }
+  }, [cart, cartReady, isBookingBlocked, cartStorageKey]);
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
@@ -316,7 +374,7 @@ function ChadhavaDetail() {
     }, 0);
 
   const handleBuyNow = () => {
-    if (isBookingBlocked) return;
+    if (isBookingBlocked || getTotalItems() === 0) return;
     const selectedOfferings = Object.entries(cart)
       .filter(([_, qty]) => qty > 0)
       .map(([offeringId, qty]) => {
@@ -680,18 +738,35 @@ function ChadhavaDetail() {
         <Footer />
       </main>
 
-      {/* Fixed Cart Button */}
-      {!isBookingBlocked && getTotalItems() > 0 && (
-        <div className="chd-cart-button">
-          <div className="chd-cart-info">
-            <span className="chd-cart-items">{t('chadhava.items', { count: getTotalItems() })}</span>
-            <span className="chd-cart-total">₹{getTotalPrice().toLocaleString('en-IN')}</span>
-          </div>
-          <button type="button" className="chd-cart-cta" onClick={handleBuyNow}>
-            {t('chadhava.buyNow')}
-          </button>
+      {/* Sticky bottom CTA — same pattern as the Pooja detail page's sticky bar */}
+      <div className={`chd-sticky-cta${isBookingBlocked ? ' chd-sticky-cta--closed' : ''}`}>
+        <div className="chd-sticky-inner">
+          {isBookingBlocked ? (
+            <span className="chd-sticky-closed-text">🔒 {t('common.bookingClosed')}</span>
+          ) : getTotalItems() > 0 ? (
+            <button
+              type="button"
+              className="chd-sticky-btn chd-sticky-btn--selected"
+              onClick={handleBuyNow}
+            >
+              <span className="chd-sticky-info">
+                <span className="chd-sticky-count">{t('chadhava.items', { count: getTotalItems() })}</span>
+                <span className="chd-sticky-price">₹{getTotalPrice().toLocaleString('en-IN')}</span>
+              </span>
+              <span className="chd-sticky-action">{t('chadhavaDetail.offerChadhava')} →</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="chd-sticky-btn chd-sticky-btn--full"
+              disabled={firstAvailableIndex < 0}
+              onClick={() => scrollToSection('packages')}
+            >
+              {firstAvailableIndex < 0 ? t('chadhava.noOfferings') : `${t('chadhava.chooseOffering')} →`}
+            </button>
+          )}
         </div>
-      )}
+      </div>
     </>
   );
 }

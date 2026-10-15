@@ -220,6 +220,8 @@ function Layout({ children }) {
     ];
 
     const isPujaDetailPage = /^\/puja\/.+/.test(location.pathname);
+    // Chadhava detail pages have their own sticky booking bar, like puja detail.
+    const isChadhavaDetailPage = /^\/chadhava\/.+/.test(location.pathname);
     const isBillingPage = location.pathname.startsWith('/billing');
 
     const isPathActive = (targetPath) => {
@@ -417,7 +419,7 @@ function Layout({ children }) {
             </header>
             <main className="layout-main">{children}</main>
 
-            {!isPujaDetailPage && !isBillingPage && (
+            {!isPujaDetailPage && !isChadhavaDetailPage && !isBillingPage && (
             <nav className="mobile-bottom-nav" aria-label={t('nav.mobileNavigation')}>
                 {mobileNavItems.map((item) => {
                     const active = isPathActive(item.path);
