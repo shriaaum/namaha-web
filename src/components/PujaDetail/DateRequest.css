@@ -1,0 +1,15 @@
+.dr-trigger{display:block;width:100%;margin-top:10px;padding:12px;border:1.5px solid #d45b13;border-radius:10px;background:#fff;color:#a84611;font-weight:700;font-size:15px;cursor:pointer}
+.dr-trigger:hover{background:#fff4ec}
+.dr-overlay{position:fixed;inset:0;background:#0009;z-index:9999;display:grid;place-items:center;padding:16px}
+.dr-modal{position:relative;background:#fff;border-radius:16px;width:min(100%,420px);max-height:90vh;overflow:auto;padding:28px;box-shadow:0 20px 60px #0004;color:#3b2416}
+.dr-modal h2{font-size:22px;margin:0 28px 8px 0}
+.dr-hint{line-height:1.5;font-size:14px;margin:0}
+.dr-modal label{display:block;font-size:14px;font-weight:600;margin:14px 0 0}
+.dr-modal input,.dr-modal textarea{box-sizing:border-box;width:100%;padding:12px;border:1px solid #d6c4b5;border-radius:8px;margin-top:6px;font-size:16px;font-family:inherit}
+.dr-phone{display:flex;align-items:center;border:1px solid #d6c4b5;border-radius:8px;margin-top:6px;padding-left:12px}
+.dr-phone input{border:0;margin:0}
+.dr-close{position:absolute;right:14px;top:10px;border:0;background:transparent;font-size:28px;cursor:pointer}
+.dr-submit{width:100%;margin-top:20px;padding:13px;border:0;border-radius:8px;background:#d45b13;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
+.dr-submit:disabled{opacity:.6}
+.dr-error{color:#b42318;display:block;margin-top:8px}
+.dr-success{font-size:18px;text-align:center;padding:25px 0}

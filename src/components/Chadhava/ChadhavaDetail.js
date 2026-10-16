@@ -7,6 +7,7 @@ import { localizeChadhava } from '../../i18n/cmsText';
 import { getDateLocale } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
+import PrasadamCard from '../Prasadam/PrasadamCard';
 import { optimizedImage, optimizedSrcSet } from '../../lib/img';
 import { setExitIntentContext } from '../../lib/exitIntentContext';
 
@@ -669,6 +670,8 @@ function ChadhavaDetail() {
               <p className="chd-faq-answer">{t('chadhava.noOfferings')}</p>
             )}
           </section>
+
+          <PrasadamCard source="chadhava" />
 
           <section
             className="chd-temple-benefits chd-section"

@@ -1,0 +1,15 @@
+.sa-wrap{margin:4px 0 8px}
+.sa-title{font-size:14px;font-weight:700;margin:0 0 8px;color:#3b2416}
+.sa-list{display:flex;flex-direction:column;gap:8px}
+.sa-card{border:1.5px solid #e4d6c8;border-radius:10px;padding:10px 12px;background:#fff}
+.sa-card--active{border-color:#d45b13;background:#fff7f1}
+.sa-pick{display:flex;gap:10px;align-items:flex-start;width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.sa-radio{flex:0 0 16px;height:16px;margin-top:3px;border:2px solid #b9a897;border-radius:50%}
+.sa-card--active .sa-radio{border-color:#d45b13;background:radial-gradient(#d45b13 45%,transparent 50%)}
+.sa-text{display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.35}
+.sa-badge{align-self:flex-start;font-style:normal;font-size:11px;font-weight:700;color:#a84611;background:#ffe9d9;border-radius:4px;padding:1px 6px}
+.sa-actions{display:flex;gap:14px;margin:6px 0 0 26px}
+.sa-actions button{padding:0;border:0;background:transparent;color:#a84611;font-size:12px;text-decoration:underline;cursor:pointer}
+.sa-new{margin-top:8px;padding:8px 0;border:0;background:transparent;color:#d45b13;font-weight:700;font-size:14px;cursor:pointer}
+.sa-save{display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 0}
+.sa-save input{width:auto!important;margin:0!important}

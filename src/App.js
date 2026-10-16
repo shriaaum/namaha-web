@@ -21,6 +21,8 @@ const MyBookings     = lazy(() => import('./components/MyBooking/MyBooking'));
 const BookingDetailsModal = lazy(() => import('./components/BookingDetailsModal/BookingDetailsModal'));
 const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB'));
 const PolicyPage     = lazy(() => import('./components/PolicyPage/PolicyPage'));
+const PrasadamCard   = lazy(() => import('./components/Prasadam/PrasadamCard'));
+const PrasadamPage   = lazy(() => import('./components/Prasadam/PrasadamPage'));
 const ExitIntentPopup = lazy(() => import('./components/ExitIntentPopup/ExitIntentPopup'));
 
 // Placeholder for below-the-fold home sections while their chunk loads.
@@ -52,6 +54,9 @@ function App() {
             <Home />
             <Suspense fallback={<SectionSkeleton />}>
               <SpecialPuja />
+            </Suspense>
+            <Suspense fallback={null}>
+              <PrasadamCard source="home" />
             </Suspense>
             <Suspense fallback={<SectionSkeleton />}>
               <WhatsAppUpdates />
@@ -97,6 +102,14 @@ function App() {
           <Layout>
             <Suspense fallback={<PageLoader />}>
               <PujaList />
+            </Suspense>
+          </Layout>
+        } />
+
+        <Route path="/prasadam" element={
+          <Layout>
+            <Suspense fallback={<PageLoader />}>
+              <PrasadamPage />
             </Suspense>
           </Layout>
         } />

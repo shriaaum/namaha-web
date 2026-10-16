@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { getPujaById, isPujaUserSoldOut } from "../../data/pujaList";
 import { optimizedImage, optimizedSrcSet } from "../../lib/img";
 import "./PujaDetail.css";
+import DateRequest from "./DateRequest";
+import PrasadamCard from "../Prasadam/PrasadamCard";
 import Footer from "../Footer/Footer";
 import { setExitIntentContext } from "../../lib/exitIntentContext";
 
@@ -587,8 +589,11 @@ function PujaDetail() {
             >
               {isBookingBlocked ? t("common.bookingClosed") : t("pujaDetail.selectPackage")}
             </button>
+            <DateRequest puja={puja} />
           </div>
         </div>
+
+        <PrasadamCard source="puja" />
 
         {/* How it Works */}
         <section className="pd-how-it-works">

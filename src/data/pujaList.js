@@ -327,6 +327,8 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   mode: apiPuja.mode,
   benefits: apiPuja.benefits,
   isActive: apiPuja.isActive,
+  // popularity: paid bookings count from backend (GET /pooja)
+  bookingCount: Number(apiPuja.bookingCount) || 0,
   section: apiPuja.section,
   // occasion: auspicious event/festival when puja is performed (e.g. Ram Navami, Diwali)
   occasion: apiPuja.occasion || apiPuja.eventOccasion || apiPuja.specialTag || null,
