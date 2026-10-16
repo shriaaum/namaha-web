@@ -4,11 +4,12 @@ import axiosInstance from '../../lib/instance';
 import { normalizeApiSoldTag, isPujaUserSoldOut, getEventDateTimeRawInIST } from '../../data/pujaList';
 import { useTranslation } from 'react-i18next';
 import { localizeChadhava } from '../../i18n/cmsText';
-import { getDateLocale } from '../../i18n/content';
+import { getDateLocale, localizePujaRecord, localizeRecord } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
 import { optimizedImage, optimizedSrcSet } from '../../lib/img';
 import { setExitIntentContext } from '../../lib/exitIntentContext';
+import { findRelatedPuja, getPujaPackagePrice } from './relatedPuja';
 
 const renderRichText = (text) => {
   if (!text || typeof text !== 'string') return null;
@@ -120,6 +121,7 @@ const isOfferingAvailable = (offering) =>
 // Per-chadhava cart in sessionStorage, so returning from /billing (navigate(-1))
 // restores the user's selection instead of re-applying the default.
 const CART_STORAGE_PREFIX = 'shriaaum.chadhavaCart:';
+const RELATED_POOJA_STORAGE_PREFIX = 'shriaaum.relatedPoojaShown:';
 
 const SECTION_TABS = [
   { id: 'packages', labelKey: 'detailTabs.packages' },
@@ -149,6 +151,9 @@ function ChadhavaDetail() {
   const collapsedLines = 4;
   const [aboutVisibleLines, setAboutVisibleLines] = useState(collapsedLines);
   const [aboutHasOverflow, setAboutHasOverflow] = useState(false);
+  const [relatedPuja, setRelatedPuja] = useState(null);
+  const [showRelatedPuja, setShowRelatedPuja] = useState(false);
+  const relatedPujaRequestRef = useRef(false);
 
   // locale defaults to en-GB: the billing/booking payload keeps the English date.
   const formatEventDate = (value, locale = 'en-GB') => {
@@ -264,7 +269,14 @@ function ChadhavaDetail() {
   }, [isBookingBlocked]);
 
   const cartStorageKey = `${CART_STORAGE_PREFIX}${detail?._id || detail?.id || id}`;
+  const relatedPujaStorageKey = `${RELATED_POOJA_STORAGE_PREFIX}${detail?._id || detail?.id || id}`;
   const firstAvailableIndex = useMemo(() => offerings.findIndex(isOfferingAvailable), [offerings]);
+
+  useEffect(() => {
+    relatedPujaRequestRef.current = false;
+    setRelatedPuja(null);
+    setShowRelatedPuja(false);
+  }, [id]);
 
   // Once per loaded chadhava: restore the saved selection, otherwise preselect
   // the first available offering (qty 1). Never auto-selects when booking is closed.
@@ -305,6 +317,54 @@ function ChadhavaDetail() {
       // storage unavailable (private mode): selection just won't survive navigation
     }
   }, [cart, cartReady, isBookingBlocked, cartStorageKey]);
+
+  useEffect(() => {
+    if (!cartReady || !detail || isBookingBlocked || relatedPujaRequestRef.current) return;
+    if (Object.values(cart).reduce((sum, quantity) => sum + Number(quantity || 0), 0) <= 0) return;
+    try {
+      if (sessionStorage.getItem(relatedPujaStorageKey)) return;
+    } catch {
+      // Continue without persistence when storage is unavailable.
+    }
+
+    let mounted = true;
+    relatedPujaRequestRef.current = true;
+    axiosInstance.get('/pooja')
+      .then((response) => {
+        const pujas = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.poojas)
+            ? response.data.poojas
+            : [];
+        const match = findRelatedPuja(detail, pujas);
+        if (!mounted || !match) return;
+        setRelatedPuja(match);
+        setShowRelatedPuja(true);
+        try {
+          sessionStorage.setItem(relatedPujaStorageKey, '1');
+        } catch {
+          // The current page state still prevents a duplicate popup.
+        }
+      })
+      .catch(() => {
+        // Recommendations are optional and must never affect booking.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [cart, cartReady, detail, isBookingBlocked, relatedPujaStorageKey]);
+
+  const relatedPujaView = useMemo(() => (
+    relatedPuja ? localizeRecord(localizePujaRecord(relatedPuja, i18n.language), i18n.language) : null
+  ), [relatedPuja, i18n.language]);
+  const relatedPujaPrice = relatedPuja ? getPujaPackagePrice(relatedPuja) : null;
+  const dismissRelatedPuja = () => setShowRelatedPuja(false);
+  const viewRelatedPuja = () => {
+    const pujaId = relatedPuja?._id || relatedPuja?.id;
+    if (!pujaId) return;
+    dismissRelatedPuja();
+    navigate(`/puja/${encodeURIComponent(pujaId)}`);
+  };
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
@@ -456,6 +516,25 @@ function ChadhavaDetail() {
 
   return (
     <>
+      {showRelatedPuja && relatedPuja && relatedPujaView && (
+        <aside className="chd-related-pooja" role="dialog" aria-label={t('relatedPooja.title')}>
+          <button type="button" className="chd-related-pooja-close" onClick={dismissRelatedPuja} aria-label={t('relatedPooja.close')}>×</button>
+          {(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image) && (
+            <img
+              className="chd-related-pooja-image"
+              src={optimizedImage(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image, 320)}
+              alt=""
+              loading="lazy"
+            />
+          )}
+          <div className="chd-related-pooja-content">
+            <p className="chd-related-pooja-eyebrow">{t('relatedPooja.title')}</p>
+            <p className="chd-related-pooja-name">{relatedPujaView.name || relatedPujaView.title}</p>
+            {relatedPujaPrice != null && <p className="chd-related-pooja-price">{t('relatedPooja.fromPrice', { price: relatedPujaPrice.toLocaleString('en-IN') })}</p>}
+            <button type="button" className="chd-related-pooja-view" onClick={viewRelatedPuja}>{t('relatedPooja.viewPooja')}</button>
+          </div>
+        </aside>
+      )}
       <main className="chd-page">
         <div className="chd-container">
           {/* Hero: banner + text */}

@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import i18n from './i18n';
 import Layout from './components/Layout/Layout';
 // Home is eager: the hero is the LCP element and must not wait for a chunk.
 import Home from './components/Home/Home';
@@ -23,6 +24,16 @@ const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB')
 const PolicyPage     = lazy(() => import('./components/PolicyPage/PolicyPage'));
 const ExitIntentPopup = lazy(() => import('./components/ExitIntentPopup/ExitIntentPopup'));
 
+const LANGUAGE_LANDING_PATHS = {
+  en: '/en',
+  hi: '/hi',
+  te: '/te',
+};
+
+const LANGUAGE_BY_LANDING_PATH = Object.fromEntries(
+  Object.entries(LANGUAGE_LANDING_PATHS).map(([language, path]) => [path, language])
+);
+
 // Placeholder for below-the-fold home sections while their chunk loads.
 const SectionSkeleton = () => <div aria-hidden="true" style={{ minHeight: 320 }} />;
 
@@ -33,9 +44,64 @@ const PageLoader = () => (
   </div>
 );
 
+function HomePage() {
+  return (
+    <Layout>
+      <Home />
+      <Suspense fallback={<SectionSkeleton />}>
+        <SpecialPuja />
+      </Suspense>
+      <Suspense fallback={<SectionSkeleton />}>
+        <WhatsAppUpdates />
+      </Suspense>
+      <Suspense fallback={<SectionSkeleton />}>
+        <Faqs />
+      </Suspense>
+      <Suspense fallback={<SectionSkeleton />}>
+        <Footer />
+      </Suspense>
+    </Layout>
+  );
+}
+
+function LegacyLanguageRedirect({ to }) {
+  const location = useLocation();
+  return <Navigate replace to={{ pathname: to, search: location.search, hash: location.hash }} />;
+}
+
+function LanguageLandingRouteSync() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const languageFromPath = LANGUAGE_BY_LANDING_PATH[location.pathname];
+  const isHomePath = location.pathname === '/' || Boolean(languageFromPath);
+
+  // Direct marketing URLs are the source of truth for the initial homepage language.
+  useEffect(() => {
+    if (languageFromPath && i18n.language !== languageFromPath) {
+      i18n.changeLanguage(languageFromPath);
+    }
+  }, [languageFromPath]);
+
+  // On the homepage, reflect a selector change in the URL while preserving campaigns/query strings.
+  useEffect(() => {
+    const syncLanguageUrl = (language) => {
+      if (!isHomePath) return;
+      const targetPath = LANGUAGE_LANDING_PATHS[language];
+      if (!targetPath || location.pathname === targetPath) return;
+      navigate({ pathname: targetPath, search: location.search, hash: location.hash });
+    };
+
+    i18n.on('languageChanged', syncLanguageUrl);
+    return () => i18n.off('languageChanged', syncLanguageUrl);
+  }, [isHomePath, location.hash, location.pathname, location.search, navigate]);
+
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <LanguageLandingRouteSync />
       <Suspense fallback={null}>
         <WhatsAppFAB />
         <ExitIntentPopup />
@@ -47,23 +113,12 @@ function App() {
           </Suspense>
         } />
 
-        <Route path="/" element={
-          <Layout>
-            <Home />
-            <Suspense fallback={<SectionSkeleton />}>
-              <SpecialPuja />
-            </Suspense>
-            <Suspense fallback={<SectionSkeleton />}>
-              <WhatsAppUpdates />
-            </Suspense>
-            <Suspense fallback={<SectionSkeleton />}>
-              <Faqs />
-            </Suspense>
-            <Suspense fallback={<SectionSkeleton />}>
-              <Footer />
-            </Suspense>
-          </Layout>
-        } />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/en" caseSensitive element={<HomePage />} />
+        <Route path="/hi" caseSensitive element={<HomePage />} />
+        <Route path="/te" caseSensitive element={<HomePage />} />
+        <Route path="/Hi" caseSensitive element={<LegacyLanguageRedirect to="/hi" />} />
+        <Route path="/tu" caseSensitive element={<LegacyLanguageRedirect to="/te" />} />
 
         <Route path="/about" element={
           <Layout>

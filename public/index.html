@@ -38,7 +38,8 @@
     -->
     <script>
       (function (w) {
-        if (w.location.pathname !== '/' || !w.fetch) return;
+        var landingPaths = ['/', '/en', '/hi', '/te'];
+        if (landingPaths.indexOf(w.location.pathname) === -1 || !w.fetch) return;
         var local = w.location.hostname === 'localhost' || w.location.hostname === '127.0.0.1';
         var prod = '%REACT_APP_API_URL%';
         var localUrl = '%REACT_APP_API_URL_LOCAL%';
