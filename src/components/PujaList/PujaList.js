@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "./PujaList.css";
+import PujaFilters from "./PujaFilters";
+import {
+  applyPujaFilters,
+  getTempleOptions,
+  getOccasionOptions,
+  SORT_OPTIONS,
+} from "./pujaFilterSort";
 import Footer from "../Footer/Footer";
 import { usePujaList, isPujaUserSoldOut } from "../../data/pujaList";
 import { useTranslation } from 'react-i18next';
@@ -43,7 +50,7 @@ function PujaList() {
   const navigate = useNavigate();
 
   // Upcoming first, then sold-out; keep date-wise order within each group.
-  const sortedPujas = pujaList.filter((p) => p?.isHidden !== true).sort((a, b) => {
+  const baseSortedPujas = [...pujaList].sort((a, b) => {
     const dateA = Number(a.eventDateRaw || 0);
     const dateB = Number(b.eventDateRaw || 0);
     const pastA = isPujaPastEvent(a);
@@ -60,6 +67,23 @@ function PujaList() {
 
     return (a.rank ?? 9999) - (b.rank ?? 9999);
   });
+
+  // Filters/sort live in the URL (?temple=&occasion=&sort=) so they survive refresh/share.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortParam = searchParams.get("sort");
+  const filters = {
+    temple: searchParams.get("temple") || "",
+    occasion: searchParams.get("occasion") || "",
+    sort: SORT_OPTIONS.includes(sortParam) ? sortParam : "date",
+  };
+  const setFilters = (next) => {
+    const params = {};
+    if (next.temple) params.temple = next.temple;
+    if (next.occasion) params.occasion = next.occasion;
+    if (next.sort && next.sort !== "date") params.sort = next.sort;
+    setSearchParams(params, { replace: true });
+  };
+  const sortedPujas = applyPujaFilters(baseSortedPujas, filters);
 
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_CARDS);
 
@@ -124,6 +148,20 @@ function PujaList() {
         <h2 className="pl-upcoming-title">
           {t('puja.upcoming', { count: sortedPujas.length })}
         </h2>
+
+        <PujaFilters
+          temples={getTempleOptions(pujaList)}
+          occasions={getOccasionOptions(pujaList)}
+          value={filters}
+          onChange={setFilters}
+          onClear={() => setFilters({ temple: "", occasion: "", sort: "date" })}
+        />
+
+        {sortedPujas.length === 0 && (
+          <p className="pf-empty">
+            {t('puja.noMatch', { defaultValue: 'No pujas match your filters.' })}
+          </p>
+        )}
 
         <div className="pl-cards">
           {visiblePujas.map((puja) => {

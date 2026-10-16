@@ -22,6 +22,8 @@ const MyBookings     = lazy(() => import('./components/MyBooking/MyBooking'));
 const BookingDetailsModal = lazy(() => import('./components/BookingDetailsModal/BookingDetailsModal'));
 const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB'));
 const PolicyPage     = lazy(() => import('./components/PolicyPage/PolicyPage'));
+const PrasadamCard   = lazy(() => import('./components/Prasadam/PrasadamCard'));
+const PrasadamPage   = lazy(() => import('./components/Prasadam/PrasadamPage'));
 const ExitIntentPopup = lazy(() => import('./components/ExitIntentPopup/ExitIntentPopup'));
 
 const LANGUAGE_LANDING_PATHS = {
@@ -113,12 +115,26 @@ function App() {
           </Suspense>
         } />
 
-        <Route path="/" element={<HomePage />} />
-        <Route path="/en" caseSensitive element={<HomePage />} />
-        <Route path="/hi" caseSensitive element={<HomePage />} />
-        <Route path="/te" caseSensitive element={<HomePage />} />
-        <Route path="/Hi" caseSensitive element={<LegacyLanguageRedirect to="/hi" />} />
-        <Route path="/tu" caseSensitive element={<LegacyLanguageRedirect to="/te" />} />
+        <Route path="/" element={
+          <Layout>
+            <Home />
+            <Suspense fallback={<SectionSkeleton />}>
+              <SpecialPuja />
+            </Suspense>
+            <Suspense fallback={null}>
+              <PrasadamCard source="home" />
+            </Suspense>
+            <Suspense fallback={<SectionSkeleton />}>
+              <WhatsAppUpdates />
+            </Suspense>
+            <Suspense fallback={<SectionSkeleton />}>
+              <Faqs />
+            </Suspense>
+            <Suspense fallback={<SectionSkeleton />}>
+              <Footer />
+            </Suspense>
+          </Layout>
+        } />
 
         <Route path="/about" element={
           <Layout>
@@ -152,6 +168,14 @@ function App() {
           <Layout>
             <Suspense fallback={<PageLoader />}>
               <PujaList />
+            </Suspense>
+          </Layout>
+        } />
+
+        <Route path="/prasadam" element={
+          <Layout>
+            <Suspense fallback={<PageLoader />}>
+              <PrasadamPage />
             </Suspense>
           </Layout>
         } />

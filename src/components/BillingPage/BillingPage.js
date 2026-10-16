@@ -8,6 +8,8 @@ import { translateCmsText } from "../../i18n/cmsText";
 import Footer from "../Footer/Footer";
 import { setExitIntentContext, markBookingCompleted } from "../../lib/exitIntentContext";
 import "./BillingPage.css";
+import SavedAddresses from "./SavedAddresses";
+import useSavedAddresses from "./useSavedAddresses";
 
 // Loaded only on this page (not globally in index.html).
 const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
@@ -441,6 +443,24 @@ function BillingPage() {
   const bookingBasePath = isLoggedInDevotee
     ? "/bookings/booking"
     : "/bookings/guest/booking";
+
+  // Saved address book (logged-in users only; only needed when Prasadam delivery is selected)
+  const fillAddress = useCallback(
+    (a) =>
+      setForm((prev) => ({
+        ...prev,
+        streetAddress: a.streetAddress || "",
+        city: a.city || "",
+        state: a.state || "",
+        pincode: a.pincode || "",
+      })),
+    []
+  );
+  const addressBook = useSavedAddresses({
+    enabled: isLoggedInDevotee && Boolean(prasadam),
+    form,
+    onFill: fillAddress,
+  });
   const [pendingBookingId, setPendingBookingId] = useState(() => {
     try {
       return sessionStorage.getItem("pendingBookingId") || null;
@@ -608,10 +628,13 @@ function BillingPage() {
 
     if (name === "pincode") {
       const digitsOnly = value.replace(/\D/g, "");
+      addressBook.clearSelection();
       setForm((prev) => ({ ...prev, pincode: digitsOnly.slice(0, 6) }));
       return;
     }
 
+    // Editing a picked saved address turns it into a new/edited address.
+    if (["streetAddress", "city", "state"].includes(name)) addressBook.clearSelection();
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -660,6 +683,8 @@ function BillingPage() {
       paymentStartedRef.current = false;
       return;
     }
+    // Address is valid: remember it for the user's next booking (best-effort, non-blocking).
+    if (prasadam) addressBook.saveCurrent();
 
     // Email: if provided, must contain "@" in a basic valid pattern
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
@@ -1697,6 +1722,7 @@ function BillingPage() {
             pattern="\d{10}"
           />
           {prasadam && <>
+            {isLoggedInDevotee && <SavedAddresses book={addressBook} />}
             <input
               name="streetAddress"
               placeholder={t("billing.address")}
@@ -1728,6 +1754,16 @@ function BillingPage() {
               pattern="\d{6}"
               required
             />
+            {isLoggedInDevotee && !addressBook.selectedId && (
+              <label className="sa-save">
+                <input
+                  type="checkbox"
+                  checked={addressBook.saveForLater}
+                  onChange={(e) => addressBook.setSaveForLater(e.target.checked)}
+                />
+                {t("savedAddress.saveLater")}
+              </label>
+            )}
           </>}
         </div>
 
