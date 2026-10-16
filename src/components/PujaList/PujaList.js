@@ -43,7 +43,7 @@ function PujaList() {
   const navigate = useNavigate();
 
   // Upcoming first, then sold-out; keep date-wise order within each group.
-  const sortedPujas = [...pujaList].sort((a, b) => {
+  const sortedPujas = pujaList.filter((p) => p?.isHidden !== true).sort((a, b) => {
     const dateA = Number(a.eventDateRaw || 0);
     const dateB = Number(b.eventDateRaw || 0);
     const pastA = isPujaPastEvent(a);

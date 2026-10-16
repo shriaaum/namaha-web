@@ -184,6 +184,11 @@ function ChadhavaDetail() {
   useEffect(() => {
     if (detail) setExitIntentContext({ pageType: 'chadhava', chadhavaId: detail._id || detail.id || id, itemTitle: detail.title || detail.name, amount: 0 });
   }, [detail, id]);
+  useEffect(() => {
+    const key = 'hidden-item-robots'; let meta = document.querySelector(`meta[data-exit-key="${key}"]`);
+    if (detail?.isHidden) { if (!meta) { meta = document.createElement('meta'); meta.dataset.exitKey = key; meta.name = 'robots'; document.head.appendChild(meta); } meta.content = 'noindex,nofollow'; }
+    return () => meta?.remove();
+  }, [detail?.isHidden]);
   const viewOfferings = useMemo(
     () => (Array.isArray(view?.offerings) ? view.offerings : offerings),
     [view, offerings]

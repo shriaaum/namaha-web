@@ -213,6 +213,12 @@ function PujaDetail() {
   useEffect(() => {
     if (puja) setExitIntentContext({ pageType: "puja", poojaId: puja._id || puja.id, itemTitle: puja.name || puja.title, amount: selectedPackage?.price || 0 });
   }, [puja, selectedPackage]);
+  useEffect(() => {
+    const key = "hidden-item-robots";
+    let meta = document.querySelector(`meta[data-exit-key="${key}"]`);
+    if (puja?.isHidden) { if (!meta) { meta = document.createElement("meta"); meta.dataset.exitKey = key; meta.name = "robots"; document.head.appendChild(meta); } meta.content = "noindex,nofollow"; }
+    return () => meta?.remove();
+  }, [puja?.isHidden]);
 
   const isBookingBlocked = useMemo(
     () => (puja ? isPujaUserSoldOut(puja) : false),
