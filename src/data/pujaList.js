@@ -466,6 +466,7 @@ export const fetchPujaList = async () => {
   }
 
   return poojasArray
+    .filter((p) => p?.isHidden !== true)
     .map(mapApiPujaToPUJA_LIST)
     .sort(sortByAvailabilityThenDate);
 };
@@ -489,7 +490,7 @@ export function usePujaList() {
             : [];
         if (!mounted) return;
         setRawPujas(data);
-        setPujas(data.map(mapApiPujaToPUJA_LIST).sort(sortByAvailabilityThenDate));
+        setPujas(data.filter((p) => p?.isHidden !== true).map(mapApiPujaToPUJA_LIST).sort(sortByAvailabilityThenDate));
       } catch (err) {
         if (!mounted) return;
         setError(err);
@@ -504,7 +505,7 @@ export function usePujaList() {
 
   useEffect(() => {
     const onLanguageChanged = () => {
-      setPujas(rawPujas.map(mapApiPujaToPUJA_LIST).sort(sortByAvailabilityThenDate));
+      setPujas(rawPujas.filter((p) => p?.isHidden !== true).map(mapApiPujaToPUJA_LIST).sort(sortByAvailabilityThenDate));
     };
     i18n.on('languageChanged', onLanguageChanged);
     return () => i18n.off('languageChanged', onLanguageChanged);

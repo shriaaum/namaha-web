@@ -63,6 +63,7 @@ function SpecialPuja() {
   const pujas = useMemo(
     () =>
       apiPujas
+        .filter((p) => p?.isHidden !== true)
         .map((p) => ({
           ...p,
           imageClass:

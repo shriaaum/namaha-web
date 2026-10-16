@@ -75,6 +75,7 @@ function Chadhava() {
   const cards = useMemo(
     () =>
       rawItems
+        .filter((item) => item?.isHidden !== true)
         .map(normalizeCard)
         .filter((card) => card.idOrShortTitle || card.id)
         .sort(sortChadhavaByAvailabilityThenDate),
