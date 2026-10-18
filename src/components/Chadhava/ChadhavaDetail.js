@@ -335,7 +335,7 @@ function ChadhavaDetail() {
 
     let mounted = true;
     relatedPujaRequestRef.current = true;
-    axiosInstance.get('/pooja')
+    axiosInstance.get('/pooja', { params: { upcoming: true, limit: 100 } })
       .then((response) => {
         const pujas = Array.isArray(response.data)
           ? response.data

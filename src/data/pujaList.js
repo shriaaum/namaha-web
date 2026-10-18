@@ -455,7 +455,7 @@ export const PUJA_LIST = [
    FETCH PUJA LIST FROM API
 ===================================================== */
 export const fetchPujaList = async () => {
-  const response = await axiosInstance.get("/pooja");
+  const response = await axiosInstance.get("/pooja", { params: { upcoming: true, limit: 100 } });
 
   let poojasArray = [];
 
@@ -482,7 +482,7 @@ export function usePujaList() {
     let mounted = true;
     (async () => {
       try {
-        const response = await axiosInstance.get("/pooja");
+        const response = await axiosInstance.get("/pooja", { params: { upcoming: true, limit: 100 } });
         const data = Array.isArray(response.data)
           ? response.data
           : Array.isArray(response.data?.poojas)
