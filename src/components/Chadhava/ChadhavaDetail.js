@@ -522,25 +522,6 @@ function ChadhavaDetail() {
 
   return (
     <>
-      {showRelatedPuja && relatedPuja && relatedPujaView && (
-        <aside className="chd-related-pooja" role="dialog" aria-label={t('relatedPooja.title')}>
-          <button type="button" className="chd-related-pooja-close" onClick={dismissRelatedPuja} aria-label={t('relatedPooja.close')}>×</button>
-          {(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image) && (
-            <img
-              className="chd-related-pooja-image"
-              src={optimizedImage(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image, 320)}
-              alt=""
-              loading="lazy"
-            />
-          )}
-          <div className="chd-related-pooja-content">
-            <p className="chd-related-pooja-eyebrow">{t('relatedPooja.title')}</p>
-            <p className="chd-related-pooja-name">{relatedPujaView.name || relatedPujaView.title}</p>
-            {relatedPujaPrice != null && <p className="chd-related-pooja-price">{t('relatedPooja.fromPrice', { price: relatedPujaPrice.toLocaleString('en-IN') })}</p>}
-            <button type="button" className="chd-related-pooja-view" onClick={viewRelatedPuja}>{t('relatedPooja.viewPooja')}</button>
-          </div>
-        </aside>
-      )}
       <main className="chd-page">
         <div className="chd-container">
           {/* Hero: banner + text */}
@@ -688,6 +669,21 @@ function ChadhavaDetail() {
               sectionRefs.current.packages = el;
             }}
           >
+            {showRelatedPuja && relatedPuja && relatedPujaView && (
+              <aside className="chd-related-pooja" role="dialog" aria-label={t('relatedPooja.title')}>
+                <button type="button" className="chd-related-pooja-close" onClick={dismissRelatedPuja} aria-label={t('relatedPooja.close')}>×</button>
+                {(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image) && (
+                  <img className="chd-related-pooja-image" src={optimizedImage(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image, 320)} alt="" loading="lazy" />
+                )}
+                <div className="chd-related-pooja-content">
+                  <p className="chd-related-pooja-eyebrow">{t('relatedPooja.title')}</p>
+                  <p className="chd-related-pooja-name">{relatedPujaView.name || relatedPujaView.title}</p>
+                  {relatedPujaView.description && <p className="chd-related-pooja-description">{relatedPujaView.description}</p>}
+                  {relatedPujaPrice != null && <p className="chd-related-pooja-price">{t('relatedPooja.fromPrice', { price: relatedPujaPrice.toLocaleString('en-IN') })}</p>}
+                  <button type="button" className="chd-related-pooja-view" onClick={viewRelatedPuja}>{t('relatedPooja.viewPooja')}</button>
+                </div>
+              </aside>
+            )}
             <h2 className="chd-section-title">{t('chadhava.chooseOffering')}</h2>
             {isBookingBlocked ? (
               <p className="chd-booking-closed-banner" role="status">
