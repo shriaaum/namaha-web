@@ -380,19 +380,6 @@
   margin-bottom: 0.35rem;
 }
 
-.chd-section-nav--fixed {
-  position: fixed;
-  top: var(--header-offset, 104px);
-  left: 0;
-  right: 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.chd-section-nav-spacer {
-  height: 56px;
-  flex-shrink: 0;
-}
-
 .chd-section-nav-inner {
   display: flex;
   gap: 0;

@@ -147,11 +147,8 @@ function ChadhavaDetail() {
   const [detail, setDetail] = useState(null);
   const [offerings, setOfferings] = useState([]);
   const [activeTab, setActiveTab] = useState('packages');
-  const [isNavSticky, setIsNavSticky] = useState(false);
   const aboutTextRef = useRef(null);
   const sectionRefs = useRef({});
-  const sectionNavRef = useRef(null);
-  const stickyThresholdRef = useRef(null);
   const collapsedLines = 4;
   const [aboutVisibleLines, setAboutVisibleLines] = useState(collapsedLines);
   const [aboutHasOverflow, setAboutHasOverflow] = useState(false);
@@ -380,37 +377,14 @@ function ChadhavaDetail() {
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
-    const nav = sectionNavRef.current;
-    if (nav) {
-      const navTop = nav.getBoundingClientRect().top + window.scrollY;
-      stickyThresholdRef.current = navTop - 82;
-    }
     sectionRefs.current[sectionId]?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     });
-    setIsNavSticky(true);
   };
 
   useEffect(() => {
     const onScroll = () => {
-      const nav = sectionNavRef.current;
-      if (!nav) return;
-      if (!isNavSticky) {
-        const rect = nav.getBoundingClientRect();
-        const navTop = rect.top + window.scrollY;
-        const threshold = navTop - 82;
-        if (window.scrollY >= threshold) {
-          stickyThresholdRef.current = threshold;
-          setIsNavSticky(true);
-        }
-      } else if (
-        stickyThresholdRef.current != null &&
-        window.scrollY < stickyThresholdRef.current
-      ) {
-        setIsNavSticky(false);
-      }
-
       const sectionOrder = SECTION_TABS.map((t) => t.id);
       let current = activeTab;
       for (const idKey of sectionOrder) {
@@ -423,7 +397,7 @@ function ChadhavaDetail() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [activeTab, isNavSticky]);
+  }, [activeTab]);
 
   const updateCart = (offeringId, change) => {
     if (isBookingBlocked) return;
@@ -648,10 +622,7 @@ function ChadhavaDetail() {
             </div>
           </section>
 
-          <nav
-            ref={sectionNavRef}
-            className={`chd-section-nav ${isNavSticky ? 'chd-section-nav--fixed' : ''}`}
-          >
+          <nav className="chd-section-nav">
             <div className="chd-section-nav-inner">
               {SECTION_TABS.map((tab) => (
                 <button
@@ -665,7 +636,6 @@ function ChadhavaDetail() {
               ))}
             </div>
           </nav>
-          {isNavSticky ? <div className="chd-section-nav-spacer" aria-hidden="true" /> : null}
 
           {/* Offerings list */}
           <section
