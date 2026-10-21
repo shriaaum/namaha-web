@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import i18n from './i18n';
 import Layout from './components/Layout/Layout';
@@ -45,31 +45,6 @@ const PageLoader = () => (
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );
-
-function HomePage() {
-  return (
-    <Layout>
-      <Home />
-      <Suspense fallback={<SectionSkeleton />}>
-        <SpecialPuja />
-      </Suspense>
-      <Suspense fallback={<SectionSkeleton />}>
-        <WhatsAppUpdates />
-      </Suspense>
-      <Suspense fallback={<SectionSkeleton />}>
-        <Faqs />
-      </Suspense>
-      <Suspense fallback={<SectionSkeleton />}>
-        <Footer />
-      </Suspense>
-    </Layout>
-  );
-}
-
-function LegacyLanguageRedirect({ to }) {
-  const location = useLocation();
-  return <Navigate replace to={{ pathname: to, search: location.search, hash: location.hash }} />;
-}
 
 function LanguageLandingRouteSync() {
   const location = useLocation();

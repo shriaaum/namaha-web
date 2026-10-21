@@ -1,4 +1,4 @@
-import { findRelatedPuja, isPujaAvailableForRecommendation } from './relatedPuja';
+import { findRelatedPuja, getPujaBannerImage, isPujaAvailableForRecommendation } from './relatedPuja';
 
 const matchingChadhava = {
   templeName: 'Kashi Vishwanath Temple',
@@ -44,5 +44,24 @@ describe('Chadhava related Pooja recommendations', () => {
       templeName: 'Different Temple',
       name: 'Lakshmi Puja',
     }])).toBeNull();
+  });
+
+  test('uses the URL and variants from an API banner object', () => {
+    const banner = getPujaBannerImage({
+      bannerUrls: [{
+        url: 'https://cdn.example.com/pooja.jpg',
+        variants: { 400: 'https://cdn.example.com/pooja-400.webp' },
+      }],
+    });
+
+    expect(banner).toEqual({
+      url: 'https://cdn.example.com/pooja.jpg',
+      variants: { 400: 'https://cdn.example.com/pooja-400.webp' },
+    });
+  });
+
+  test('supports legacy string banner URLs when no banner object is present', () => {
+    expect(getPujaBannerImage({ bannerImage: 'https://cdn.example.com/legacy.jpg' }))
+      .toEqual({ url: 'https://cdn.example.com/legacy.jpg', variants: undefined });
   });
 });

@@ -1065,7 +1065,7 @@ body.hide-whatsapp-fab .wa-fab-wrap {
   display: flex;
   position: relative;
   width: min(100%, 760px);
-  min-height: 148px;
+  min-height: 132px;
   margin: 0 0 1.25rem;
   overflow: hidden;
   border: 1px solid #f5c990;
@@ -1077,13 +1077,21 @@ body.hide-whatsapp-fab .wa-fab-wrap {
 .chd-related-pooja-image {
   width: 180px;
   min-width: 180px;
-  object-fit: cover;
+  height: auto;
+  align-self: stretch;
+  object-fit: contain;
+  object-position: center;
+  background: #fff7ed;
 }
 
 .chd-related-pooja-content {
   flex: 1;
   min-width: 0;
-  padding: 1rem 3rem 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.85rem 3rem 0.85rem 1rem;
 }
 
 .chd-related-pooja-eyebrow,
@@ -1128,7 +1136,7 @@ body.hide-whatsapp-fab .wa-fab-wrap {
 }
 
 .chd-related-pooja-view {
-  margin-top: 0.7rem;
+  margin-top: 0.55rem;
   padding: 0.5rem 0.85rem;
   border: 0;
   border-radius: 8px;
@@ -1177,7 +1185,7 @@ body.hide-whatsapp-fab .wa-fab-wrap {
   }
 
   .chd-related-pooja-content {
-    padding: 0.85rem 2.5rem 0.85rem 0.85rem;
+    padding: 0.75rem 2.25rem 0.75rem 0.75rem;
   }
 
   .chd-related-pooja-name {

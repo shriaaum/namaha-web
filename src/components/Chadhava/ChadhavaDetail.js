@@ -10,7 +10,7 @@ import Footer from '../Footer/Footer';
 import PrasadamCard from '../Prasadam/PrasadamCard';
 import { optimizedImage, optimizedSrcSet } from '../../lib/img';
 import { setExitIntentContext } from '../../lib/exitIntentContext';
-import { findRelatedPuja, getPujaPackagePrice } from './relatedPuja';
+import { findRelatedPuja, getPujaBannerImage, getPujaPackagePrice } from './relatedPuja';
 
 const renderRichText = (text) => {
   if (!text || typeof text !== 'string') return null;
@@ -122,7 +122,10 @@ const isOfferingAvailable = (offering) =>
 // Per-chadhava cart in sessionStorage, so returning from /billing (navigate(-1))
 // restores the user's selection instead of re-applying the default.
 const CART_STORAGE_PREFIX = 'shriaaum.chadhavaCart:';
-const RELATED_POOJA_STORAGE_PREFIX = 'shriaaum.relatedPoojaShown:';
+// A recommendation is hidden for the current browser session only after the
+// customer actively dismisses it. `Shown` keys from the earlier behaviour are
+// deliberately ignored so they cannot suppress a valid recommendation.
+const RELATED_POOJA_DISMISSED_STORAGE_PREFIX = 'shriaaum.relatedPoojaDismissed:';
 
 const SECTION_TABS = [
   { id: 'packages', labelKey: 'detailTabs.packages' },
@@ -275,7 +278,7 @@ function ChadhavaDetail() {
   }, [isBookingBlocked]);
 
   const cartStorageKey = `${CART_STORAGE_PREFIX}${detail?._id || detail?.id || id}`;
-  const relatedPujaStorageKey = `${RELATED_POOJA_STORAGE_PREFIX}${detail?._id || detail?.id || id}`;
+  const relatedPujaStorageKey = `${RELATED_POOJA_DISMISSED_STORAGE_PREFIX}${detail?._id || detail?.id || id}`;
   const firstAvailableIndex = useMemo(() => offerings.findIndex(isOfferingAvailable), [offerings]);
 
   useEffect(() => {
@@ -346,11 +349,6 @@ function ChadhavaDetail() {
         if (!mounted || !match) return;
         setRelatedPuja(match);
         setShowRelatedPuja(true);
-        try {
-          sessionStorage.setItem(relatedPujaStorageKey, '1');
-        } catch {
-          // The current page state still prevents a duplicate popup.
-        }
       })
       .catch(() => {
         // Recommendations are optional and must never affect booking.
@@ -364,7 +362,15 @@ function ChadhavaDetail() {
     relatedPuja ? localizeRecord(localizePujaRecord(relatedPuja, i18n.language), i18n.language) : null
   ), [relatedPuja, i18n.language]);
   const relatedPujaPrice = relatedPuja ? getPujaPackagePrice(relatedPuja) : null;
-  const dismissRelatedPuja = () => setShowRelatedPuja(false);
+  const relatedPujaBanner = useMemo(() => getPujaBannerImage(relatedPuja), [relatedPuja]);
+  const dismissRelatedPuja = () => {
+    setShowRelatedPuja(false);
+    try {
+      sessionStorage.setItem(relatedPujaStorageKey, '1');
+    } catch {
+      // Dismissal still works for this render when storage is unavailable.
+    }
+  };
   const viewRelatedPuja = () => {
     const pujaId = relatedPuja?._id || relatedPuja?.id;
     if (!pujaId) return;
@@ -672,8 +678,15 @@ function ChadhavaDetail() {
             {showRelatedPuja && relatedPuja && relatedPujaView && (
               <aside className="chd-related-pooja" role="dialog" aria-label={t('relatedPooja.title')}>
                 <button type="button" className="chd-related-pooja-close" onClick={dismissRelatedPuja} aria-label={t('relatedPooja.close')}>×</button>
-                {(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image) && (
-                  <img className="chd-related-pooja-image" src={optimizedImage(relatedPuja.bannerUrls?.[0] || relatedPuja.bannerImage || relatedPuja.image, 320)} alt="" loading="lazy" />
+                {relatedPujaBanner && (
+                  <img
+                    className="chd-related-pooja-image"
+                    src={optimizedImage(relatedPujaBanner.url, 320, relatedPujaBanner.variants)}
+                    srcSet={optimizedSrcSet(relatedPujaBanner.url, [320, 640], relatedPujaBanner.variants)}
+                    sizes="(max-width: 480px) 96px, 180px"
+                    alt=""
+                    loading="lazy"
+                  />
                 )}
                 <div className="chd-related-pooja-content">
                   <p className="chd-related-pooja-eyebrow">{t('relatedPooja.title')}</p>

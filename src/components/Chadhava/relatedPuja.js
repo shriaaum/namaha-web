@@ -26,6 +26,29 @@ export const getPujaPackagePrice = (puja) => {
   return prices.length ? Math.min(...prices) : null;
 };
 
+/**
+ * API banner entries are objects (`{ url, variants }`), while some legacy
+ * records still return a bare URL. Keep that API detail out of the component.
+ */
+export const getPujaBannerImage = (puja) => {
+  const candidates = [
+    ...(Array.isArray(puja?.bannerUrls) ? puja.bannerUrls : []),
+    puja?.bannerImage,
+    puja?.image,
+  ];
+
+  for (const entry of candidates) {
+    if (typeof entry === 'string' && entry.trim()) return { url: entry, variants: undefined };
+    if (entry && typeof entry === 'object') {
+      const url = entry.url || entry.secure_url || entry.imageUrl || entry.src;
+      if (typeof url === 'string' && url.trim()) {
+        return { url, variants: entry.variants || entry.imageVariants || undefined };
+      }
+    }
+  }
+  return null;
+};
+
 export const isPujaAvailableForRecommendation = (puja) => {
   if (!puja || puja.isActive === false || puja.isHidden === true || puja.isAvailable === false) return false;
   if (normalizeApiSoldTag(puja.soldTag ?? puja.soldTagPolicy) === true) return false;
