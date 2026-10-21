@@ -15,6 +15,8 @@ import useSavedAddresses from "./useSavedAddresses";
 const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 const CHADHAVA_PRASADAM_PRICE = 250;
+const DAKSHINA_OPTIONS = [51, 101, 251, 501];
+const MAX_DAKSHINA_AMOUNT = 100000;
 
 function BillingPage() {
   const { t, i18n } = useTranslation();
@@ -168,6 +170,15 @@ function BillingPage() {
   const passedGrandTotal = parseAmount(grandTotal);
 
   const [prasadam, setPrasadam] = useState(location.state?.prasadam ?? false);
+  const [dakshinaSelection, setDakshinaSelection] = useState("0");
+  const [customDakshina, setCustomDakshina] = useState("");
+  const dakshinaAmount = useMemo(() => {
+    const rawAmount = dakshinaSelection === "custom" ? customDakshina : dakshinaSelection;
+    const amount = Number(rawAmount);
+    return Number.isSafeInteger(amount) && amount > 0 && amount <= MAX_DAKSHINA_AMOUNT
+      ? amount
+      : 0;
+  }, [dakshinaSelection, customDakshina]);
 
   /** Chadhava flow: prasadam is a paid add-on (₹250); Puja flow: prasadam remains free. */
   const prasadamAmount = useMemo(
@@ -256,7 +267,9 @@ function BillingPage() {
 
   const couponApplied = appliedCoupon != null;
   const isSpecialCouponApplied = couponApplied && Boolean(appliedCoupon?.specialCoupon);
-  const finalPayable = couponApplied ? finalAmount : Math.max(subtotal, 0);
+  // Coupons apply only to booking charges; Dakshina is always a separate voluntary amount.
+  const bookingPayable = couponApplied ? finalAmount : Math.max(subtotal, 0);
+  const finalPayable = bookingPayable + dakshinaAmount;
 
   useEffect(() => {
     if (isSpecialCouponApplied && prasadam) setPrasadam(false);
@@ -279,7 +292,7 @@ function BillingPage() {
     if (type === "percentage") {
       return (amt * val) / 100;
     }
-    if (type === "fixed" || type === "amount") {
+    if (type === "fixed" || type === "flat" || type === "amount") {
       return Math.min(val, amt);
     }
     return 0;
@@ -525,6 +538,7 @@ function BillingPage() {
       discountAmount: couponApplied ? discountAmount : 0,
       selectedPackageId: selectedPackage?.id || selectedPackage?._id || null,
       addonsTotal: computedAddonsTotal,
+      dakshinaAmount,
       grandTotal: finalPayable,
     });
     // If we already auto-saved this exact data and we have an ID, don't spam backend.
@@ -551,6 +565,7 @@ function BillingPage() {
         selectedChadhava: selectedChadhava || null,
         addons: resolvedAddons,
         addonsTotal: computedAddonsTotal,
+        dakshinaAmount,
         prasadam,
         prasadamAmount,
       };
@@ -607,6 +622,7 @@ function BillingPage() {
     resolvedSelectedPackage,
     selectedChadhava,
     computedAddonsTotal,
+    dakshinaAmount,
     resolvedAddons,
     prasadam,
     prasadamAmount,
@@ -707,6 +723,11 @@ function BillingPage() {
       paymentStartedRef.current = false;
       return;
     }
+    if (dakshinaSelection === "custom" && !dakshinaAmount) {
+      showToast(t("dakshina.invalidAmount"));
+      paymentStartedRef.current = false;
+      return;
+    }
 
     try {
       setLoading(true);
@@ -735,6 +756,7 @@ function BillingPage() {
         selectedChadhava: selectedChadhava || null,
         addons: resolvedAddons,
         addonsTotal: computedAddonsTotal,
+        dakshinaAmount,
 
         prasadam,
         prasadamAmount,
@@ -873,6 +895,7 @@ function BillingPage() {
     image: image || null,
     addons: resolvedAddons,
     addonsTotal: computedAddonsTotal,
+    dakshinaAmount,
     prasadam,
     prasadamAmount,
   });
@@ -924,6 +947,7 @@ function BillingPage() {
       addonsTotal: computedAddonsTotal,
       prasadam,
       prasadamAmount,
+      dakshinaAmount,
       coupon: payload.coupon,
       couponCode: payload.couponCode,
       discountAmount: payload.discountAmount || discountAmount,
@@ -1223,6 +1247,11 @@ function BillingPage() {
         ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Prasadam</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${prasadamAmount}</td></tr>`
         : "";
 
+    const dakshinaRow =
+      Number(dakshinaAmount) > 0
+        ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Dakshina for Pujari</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${dakshinaAmount}</td></tr>`
+        : "";
+
     const couponRow =
       coupon && couponCode && (discountAmount || 0) > 0
         ? `<tr><td colspan="2" style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Discount (${couponCode})</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">-₹${discountAmount || 0}</td></tr>`
@@ -1307,6 +1336,7 @@ function BillingPage() {
                   ${pkgRow}
                   ${addonsRows}
                   ${prasadamRow}
+                  ${dakshinaRow}
                   ${couponRow}
                 </tbody>
               </table>
@@ -1424,6 +1454,9 @@ function BillingPage() {
             <p><strong>{t("billing.labelPackage")}:</strong> {invoiceData.packageName} ({invoiceData.packagePrice})</p>
             {invoiceData.prasadam && invoiceData.prasadamAmount > 0 && (
               <p><strong>{t("billing.prasadam")}:</strong> ₹{invoiceData.prasadamAmount}</p>
+            )}
+            {invoiceData.dakshinaAmount > 0 && (
+              <p><strong>{t("dakshina.title")}:</strong> ₹{invoiceData.dakshinaAmount}</p>
             )}
             <p><strong>{t("billing.grandTotal")}:</strong> ₹{invoiceData.grandTotal}</p>
           </div>
@@ -1649,6 +1682,13 @@ function BillingPage() {
             </div>
           )}
 
+          {dakshinaAmount > 0 && (
+            <div className="addons-total-row">
+              <span className="addons-total-label">{t("dakshina.title")}:</span>
+              <span className="addons-total-price">₹{dakshinaAmount}</span>
+            </div>
+          )}
+
           {/* ✅ GRAND TOTAL */}
           <div className="grand-total-row">
             <span className="grand-total-label">{t("billing.grandTotal")}:</span>
@@ -1766,6 +1806,57 @@ function BillingPage() {
             )}
           </>}
         </div>
+
+        <section className="billing-dakshina" aria-labelledby="dakshina-title">
+          <div>
+            <h3 id="dakshina-title">{t("dakshina.title")}</h3>
+            <p>{t("dakshina.hint")}</p>
+          </div>
+          <div className="billing-dakshina-options" role="radiogroup" aria-label={t("dakshina.title")}>
+            <button
+              type="button"
+              className={`billing-dakshina-option ${dakshinaSelection === "0" ? "is-selected" : ""}`}
+              aria-pressed={dakshinaSelection === "0"}
+              onClick={() => setDakshinaSelection("0")}
+            >
+              {t("dakshina.none")} · ₹0
+            </button>
+            {DAKSHINA_OPTIONS.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                className={`billing-dakshina-option ${dakshinaSelection === String(amount) ? "is-selected" : ""}`}
+                aria-pressed={dakshinaSelection === String(amount)}
+                onClick={() => setDakshinaSelection(String(amount))}
+              >
+                ₹{amount}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`billing-dakshina-option ${dakshinaSelection === "custom" ? "is-selected" : ""}`}
+              aria-pressed={dakshinaSelection === "custom"}
+              onClick={() => setDakshinaSelection("custom")}
+            >
+              {t("dakshina.custom")}
+            </button>
+          </div>
+          {dakshinaSelection === "custom" && (
+            <input
+              className="billing-dakshina-custom"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max={MAX_DAKSHINA_AMOUNT}
+              step="1"
+              placeholder={t("dakshina.customPlaceholder")}
+              value={customDakshina}
+              onChange={(event) => setCustomDakshina(event.target.value.replace(/\D/g, ""))}
+              aria-describedby="dakshina-limit"
+            />
+          )}
+          {dakshinaSelection === "custom" && <p id="dakshina-limit" className="billing-dakshina-limit">{t("dakshina.limit", { amount: MAX_DAKSHINA_AMOUNT })}</p>}
+        </section>
 
         <button
           onClick={handlePayment}
