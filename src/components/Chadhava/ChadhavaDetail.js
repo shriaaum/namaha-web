@@ -112,7 +112,16 @@ const SECTION_TABS = [
   { id: 'benefits', labelKey: 'detailTabs.benefits' },
   { id: 'temple', labelKey: 'detailTabs.temple' },
   { id: 'faqs', labelKey: 'detailTabs.faqs' },
+  { id: 'reviews', labelKey: 'detailTabs.reviews' },
 ];
+
+// Placeholder reviewer metadata for the Chadhava benefit card. This is display-only
+// frontend data and does not alter any customer or backend review record.
+const CHADHAVA_BENEFIT_REVIEWER = {
+  title: 'Amit Sharma',
+  location: 'Varanasi',
+  rating: 5,
+};
 
 function ChadhavaDetail() {
   // Keep the exit popup aware of the item currently being viewed.
@@ -129,6 +138,7 @@ function ChadhavaDetail() {
   const [activeTab, setActiveTab] = useState('packages');
   const aboutTextRef = useRef(null);
   const sectionRefs = useRef({});
+  const tabScrollLockRef = useRef(false);
   const collapsedLines = 4;
   const [aboutVisibleLines, setAboutVisibleLines] = useState(collapsedLines);
   const [aboutHasOverflow, setAboutHasOverflow] = useState(false);
@@ -181,6 +191,10 @@ function ChadhavaDetail() {
     if (!Array.isArray(raw)) return [];
     return raw
       .map((item) => {
+        if (typeof item === 'string') {
+          const title = item.trim();
+          return title ? { title, subtitle: '' } : null;
+        }
         if (!item || typeof item !== 'object') return null;
         const title = String(item.title || '').trim();
         const subtitle = String(item.subtitle || '').trim();
@@ -357,6 +371,7 @@ function ChadhavaDetail() {
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
+    tabScrollLockRef.current = true;
     sectionRefs.current[sectionId]?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
@@ -364,7 +379,14 @@ function ChadhavaDetail() {
   };
 
   useEffect(() => {
+    let unlockTimer;
     const onScroll = () => {
+      // While a tab click is smooth-scrolling, keep the clicked tab active until scrolling settles.
+      if (tabScrollLockRef.current) {
+        clearTimeout(unlockTimer);
+        unlockTimer = setTimeout(() => { tabScrollLockRef.current = false; }, 150);
+        return;
+      }
       const sectionOrder = SECTION_TABS.map((t) => t.id);
       let current = activeTab;
       for (const idKey of sectionOrder) {
@@ -376,7 +398,10 @@ function ChadhavaDetail() {
       if (current !== activeTab) setActiveTab(current);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      clearTimeout(unlockTimer);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, [activeTab]);
 
   const updateCart = (offeringId, change) => {
@@ -765,12 +790,22 @@ function ChadhavaDetail() {
           </section>
 
           {/* Reviews & Feedback */}
-          <ReviewsFeedback
-            serviceType="chadhava"
-            matchText={[detail?.title, detail?.shortTitle, detail?.subtitle, detail?.templeName, detail?.description]
-              .filter(Boolean)
-              .join(' ')}
-          />
+          <div
+            className="chd-reviews-anchor"
+            id="reviews"
+            ref={(el) => {
+              sectionRefs.current.reviews = el;
+            }}
+          >
+            <ReviewsFeedback
+              serviceType="chadhava"
+              benefits={normalizedBenefits}
+              benefitSource={CHADHAVA_BENEFIT_REVIEWER}
+              matchText={[detail?.title, detail?.shortTitle, detail?.subtitle, detail?.templeName, detail?.description]
+                .filter(Boolean)
+                .join(' ')}
+            />
+          </div>
         </div>
         <Footer />
       </main>

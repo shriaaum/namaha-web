@@ -1114,3 +1114,8 @@ body.hide-whatsapp-fab .wa-fab-wrap {
     width: 100%;
   }
 }
+
+/* Reviews tab target — clears the sticky header + section tabs like other sections */
+.chd-reviews-anchor {
+  scroll-margin-top: calc(var(--header-offset, 120px) + 12px);
+}

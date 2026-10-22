@@ -2482,3 +2482,8 @@
   }
 }
 
+
+/* Reviews tab target — clears the sticky header + section tabs like other sections */
+.pd-reviews-anchor {
+  scroll-margin-top: calc(var(--header-offset, 140px) + 12px);
+}

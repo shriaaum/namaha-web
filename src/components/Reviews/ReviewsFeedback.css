@@ -30,12 +30,16 @@
   min-width: 0;
 }
 
+.rf-item blockquote {
+  margin: 0;
+}
+
 .rf-card {
   flex: 1;
   margin: 0;
   min-height: 200px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   padding: 1.75rem 1.5rem;
   background: #f3f3f3;
   border-radius: 14px;
@@ -47,6 +51,38 @@
   font-style: italic;
   line-height: 1.6;
   color: #1f2937;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+}
+
+.rf-card-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.rf-card p.is-expanded {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+.rf-view-toggle {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ea580c;
+  font-size: 0.85rem;
+  font-style: normal;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .rf-author {
@@ -68,6 +104,13 @@
   color: #ea580c;
   font-weight: 700;
   font-size: 1.1rem;
+  overflow: hidden;
+}
+
+.rf-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .rf-author-text {
@@ -80,6 +123,12 @@
   font-size: 1.15rem;
   font-weight: 700;
   color: #111827;
+}
+
+.rf-benefit .rf-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rf-meta {
@@ -119,6 +168,10 @@
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .rf-arrow:disabled {

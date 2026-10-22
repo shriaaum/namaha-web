@@ -159,7 +159,7 @@
   }
   
   /* BUTTON */
-  button {
+  .billing-container button {
     width: 100%;
     padding: 14px;
     background: #ff6b00;
@@ -173,7 +173,7 @@
   
 
   
-  button:disabled {
+  .billing-container button:disabled {
     background: gray;
   }
   
@@ -1092,7 +1092,7 @@
     font-size: 13px;
   }
 
-  button {
+  .billing-container button {
     padding: 12px;
     font-size: 0.95rem;
   }

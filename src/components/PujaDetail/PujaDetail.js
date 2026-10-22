@@ -91,6 +91,7 @@ const SECTION_TABS = [
   { id: "benefits", labelKey: "detailTabs.benefits" },
   { id: "temple", labelKey: "detailTabs.temple" },
   { id: "faqs", labelKey: "detailTabs.faqs" },
+  { id: "reviews", labelKey: "detailTabs.reviews" },
 ];
 // Text lives in i18n: pujaDetail.bullet1..3
 const PACKAGE_BULLET_KEYS = ["pujaDetail.bullet1", "pujaDetail.bullet2", "pujaDetail.bullet3"];
@@ -185,6 +186,7 @@ function PujaDetail() {
   const [expandedPackageIndex, setExpandedPackageIndex] = useState(null);
 
   const sectionRefs = useRef({});
+  const tabScrollLockRef = useRef(false);
   const aboutTextRef = useRef(null);
 
   const slides = puja?.bannerUrls?.map((img) => img.url) || [];
@@ -284,11 +286,36 @@ function PujaDetail() {
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
+    tabScrollLockRef.current = true;
     sectionRefs.current[sectionId]?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
   };
+
+  // Highlight the tab of the section currently under the sticky header while scrolling manually
+  useEffect(() => {
+    let unlockTimer;
+    const onScroll = () => {
+      // While a tab click is smooth-scrolling, keep the clicked tab active until scrolling settles.
+      if (tabScrollLockRef.current) {
+        clearTimeout(unlockTimer);
+        unlockTimer = setTimeout(() => { tabScrollLockRef.current = false; }, 150);
+        return;
+      }
+      let current = "packages";
+      for (const tab of SECTION_TABS) {
+        const el = sectionRefs.current[tab.id];
+        if (el && el.getBoundingClientRect().top <= 180) current = tab.id;
+      }
+      setActiveTab((previous) => (previous === current ? previous : current));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      clearTimeout(unlockTimer);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -725,8 +752,20 @@ function PujaDetail() {
         </section>
 
         {/* Reviews & Feedback */}
-        <div className="pd-section-content">
-          <ReviewsFeedback serviceType="puja" />
+        <div
+          className="pd-section-content pd-reviews-anchor"
+          ref={(el) => {
+            sectionRefs.current.reviews = el;
+          }}
+        >
+          <ReviewsFeedback
+            serviceType="puja"
+            benefits={puja.benefits}
+            benefitSource={{
+              title: puja.title || puja.name || "",
+              location: puja.templeName,
+            }}
+          />
         </div>
       </div>
       <Footer />
