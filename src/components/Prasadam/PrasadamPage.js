@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
 import { loadScript } from "../../lib/loadScript";
+import { getRazorpayPublicKey } from "../../lib/razorpayConfig";
 import SavedAddresses from "../BillingPage/SavedAddresses";
 import useSavedAddresses from "../BillingPage/useSavedAddresses";
 import { usePrasadamProduct } from "./PrasadamCard";
@@ -92,6 +93,9 @@ export default function PrasadamPage() {
     if (!form.streetAddress.trim() || !form.city.trim() || !form.state.trim() || !/^\d{6}$/.test(form.pincode)) {
       return setError(t("prasadamShop.errAddress"));
     }
+    // Validate build-time checkout configuration before creating an order.
+    const key = getRazorpayPublicKey();
+    if (!key) return setError(t("billing.errRazorpayKey"));
 
     setLoading(true);
     try {
@@ -102,7 +106,6 @@ export default function PrasadamPage() {
       });
       const { razorpayOrderId, amountPaise } = res.data;
       if (!window.Razorpay) await loadScript(RAZORPAY_SRC);
-      const key = process.env.REACT_APP_RAZORPAY_KEY_ID;
       if (!window.Razorpay || !key) throw new Error("razorpay-unavailable");
 
       book.saveCurrent(); // remember a newly typed address (best-effort)

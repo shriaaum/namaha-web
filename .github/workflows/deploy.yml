@@ -33,6 +33,8 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd /var/lib/projects/namaha-web
           sudo docker system prune -af
-          sudo docker build -t namaha-web .
+          sudo docker build \
+            --build-arg REACT_APP_RAZORPAY_KEY_ID='${{ secrets.REACT_APP_RAZORPAY_KEY_ID }}' \
+            -t namaha-web .
           sudo docker compose up -d
           EOF

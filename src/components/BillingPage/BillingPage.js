@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
 import { loadScript } from "../../lib/loadScript";
+import { getRazorpayPublicKey } from "../../lib/razorpayConfig";
 import { localizePujaRecord } from "../../i18n/content";
 import { translateCmsText } from "../../i18n/cmsText";
 import Footer from "../Footer/Footer";
@@ -735,6 +736,14 @@ function BillingPage() {
       paymentStartedRef.current = false;
       return;
     }
+    // Fail before order creation: a broken browser build must never leave a
+    // pending booking that cannot open Razorpay Checkout.
+    const razorpayKey = getRazorpayPublicKey();
+    if (!razorpayKey) {
+      showToast(t("billing.errRazorpayKey"));
+      paymentStartedRef.current = false;
+      return;
+    }
 
     try {
       setLoading(true);
@@ -802,7 +811,8 @@ function BillingPage() {
         await loadRazorpay(
           orderId,
           finalPayable,
-          backendOrderAmountPaise
+          backendOrderAmountPaise,
+          razorpayKey
         );
       } else {
         showToast(res.data.message || t("billing.errCreateOrder"));
@@ -1028,7 +1038,7 @@ function BillingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional narrow deps for recovery
   }, [puja?.id, puja?._id]);
 
-  const loadRazorpay = async (orderId, amount, backendOrderAmountPaise = null) => {
+  const loadRazorpay = async (orderId, amount, backendOrderAmountPaise = null, razorpayKey = getRazorpayPublicKey()) => {
     if (!window.Razorpay) {
       try {
         await loadScript(RAZORPAY_CHECKOUT_SRC);
@@ -1038,18 +1048,19 @@ function BillingPage() {
     }
     if (!window.Razorpay) {
       showToast(t("billing.errRazorpaySdk"));
+      paymentStartedRef.current = false;
       return;
     }
 
-    const razorpayKey = process.env.REACT_APP_RAZORPAY_KEY_ID;
-
     if (!razorpayKey) {
       showToast(t("billing.errRazorpayKey"));
+      paymentStartedRef.current = false;
       return;
     }
     if (!orderId || typeof orderId !== "string" || !orderId.startsWith("order_")) {
       console.error("Invalid order_id from backend:", orderId);
       showToast(t("billing.errInvalidOrder"));
+      paymentStartedRef.current = false;
       return;
     }
     setPendingRazorpayOrderId(orderId);
@@ -1092,7 +1103,7 @@ function BillingPage() {
     }
 
     const options = {
-      key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+      key: razorpayKey,
       amount: orderAmountPaise, // always integer paise; prefer backend order amount
       currency: "INR",
       order_id: orderId,
@@ -1181,6 +1192,7 @@ function BillingPage() {
             console.error("Reconcile payment error:", reconcileErr);
           }
         } finally {
+          paymentStartedRef.current = false;
           setPostPaymentLoading(false);
         }
       },
@@ -1196,6 +1208,8 @@ function BillingPage() {
 
     const rzp = new window.Razorpay(options);
     rzp.on("payment.failed", function (response) {
+      paymentStartedRef.current = false;
+      setLoading(false);
       console.error("❌ Razorpay payment failed:", response.error);
       const msg = response.error?.description || response.error?.reason || "Payment failed.";
       if (response.error?.code === "BAD_REQUEST_ERROR" && msg.includes("id") && msg.includes("not exist")) {
