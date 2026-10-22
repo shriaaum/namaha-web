@@ -45,6 +45,7 @@ function BillingPage() {
     coupon,
     coupons: stateCoupons,
     mode: pujaMode,
+    textTranslations: stateTextTranslations,
   } = location.state || {};
 
   const isChadhavaFlow =
@@ -200,13 +201,19 @@ function BillingPage() {
     Family: "pujaDetail.pkgFamily",
     "Joint Family": "pujaDetail.pkgJoint",
   };
+  // Translations stored on the Pooja/Chadhava record (API), then the reviewed dictionary.
+  const textTranslations = stateTextTranslations || puja?.textTranslations;
+  const translateText = useCallback(
+    (english) => (english && textTranslations?.[i18n.language]?.[english]) || translateCmsText(english, i18n.language),
+    [textTranslations, i18n.language]
+  );
   const pujaTitleEn = puja?.titleEn || puja?.title;
   const displayPujaTitle = useMemo(() => {
     if (!pujaTitleEn) return pujaTitleEn;
-    if (isChadhavaFlow) return translateCmsText(pujaTitleEn, i18n.language);
+    if (isChadhavaFlow) return translateText(pujaTitleEn);
     const localized = localizePujaRecord({ _id: puja?.id, name: pujaTitleEn }, i18n.language)?.name;
-    return localized && localized !== pujaTitleEn ? localized : translateCmsText(pujaTitleEn, i18n.language);
-  }, [isChadhavaFlow, puja?.id, pujaTitleEn, i18n.language]);
+    return localized && localized !== pujaTitleEn ? localized : translateText(pujaTitleEn);
+  }, [isChadhavaFlow, puja?.id, pujaTitleEn, i18n.language, translateText]);
   const addonDisplayNames = useMemo(() => {
     const list = puja?.addOns || [];
     const english = list.map((a) => ({ _id: a.id, name: a.nameEn || a.name }));
@@ -215,17 +222,17 @@ function BillingPage() {
       list.map((a, index) => {
         const en = english[index].name;
         const viaRecord = localized[index]?.name;
-        const label = viaRecord && viaRecord !== en ? viaRecord : translateCmsText(en, i18n.language);
+        const label = viaRecord && viaRecord !== en ? viaRecord : translateText(en);
         return [String(a.id || `addon-${index}`), label];
       })
     );
-  }, [puja?.id, puja?.addOns, i18n.language]);
+  }, [puja?.id, puja?.addOns, i18n.language, translateText]);
   const getAddonDisplayName = (addon, index) =>
     isChadhavaFlow
-      ? translateCmsText(addon?.name, i18n.language)
+      ? translateText(addon?.name)
       : addonDisplayNames.get(String(addon?.id || `addon-${index}`)) || addon?.name;
   const getPackageDisplayName = (pkg) =>
-    PACKAGE_LABEL_KEYS[pkg?.name] ? t(PACKAGE_LABEL_KEYS[pkg.name]) : pkg?.name;
+    PACKAGE_LABEL_KEYS[pkg?.name] ? t(PACKAGE_LABEL_KEYS[pkg.name]) : translateText(pkg?.name);
 
   const resolvedSelectedPackage = useMemo(
     () =>
@@ -1517,7 +1524,7 @@ function BillingPage() {
           {isChadhavaFlow && selectedChadhava && (
             <div className="billing-selected-chadhava">
               <p>
-                <b>{t("billing.selectedChadhava")}:</b> {translateCmsText(selectedChadhava.title, i18n.language) || displayPujaTitle}
+                <b>{t("billing.selectedChadhava")}:</b> {translateText(selectedChadhava.title) || displayPujaTitle}
               </p>
               {selectedChadhava.date && (
                 <p>
@@ -1529,7 +1536,7 @@ function BillingPage() {
           <p>
             <b>{isChadhavaFlow ? t("billing.labelType") : t("billing.labelPackage")}:</b>{" "}
             {isChadhavaFlow
-              ? (translateCmsText(selectedChadhava?.title, i18n.language) || displayPujaTitle || selectedPackage?.name)
+              ? (translateText(selectedChadhava?.title) || displayPujaTitle || selectedPackage?.name)
               : getPackageDisplayName(selectedPackage)}
           </p>
           <p>
@@ -1589,7 +1596,7 @@ function BillingPage() {
                 <div key={addon.id || index} className="addon-row">
                   <span>
                     {isChadhavaFlow
-                      ? translateCmsText(addon.name, i18n.language)
+                      ? translateText(addon.name)
                       : (addonDisplayNames.get(String(addon.id)) || addon.name)} × {addon.quantity} (₹{parseAmount(addon.price)})
                   </span>
                   {!isChadhavaFlow && (

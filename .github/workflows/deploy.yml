@@ -23,6 +23,8 @@ jobs:
           rsync -avz --delete \
           --exclude=".git" \
           --exclude="node_modules" \
+          --exclude=".env" \
+          --exclude=".env.*" \
           -e "ssh -o StrictHostKeyChecking=no" \
           ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/lib/projects/namaha-web
 

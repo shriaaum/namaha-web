@@ -4,9 +4,10 @@ import axiosInstance from '../../lib/instance';
 import { normalizeApiSoldTag, isPujaUserSoldOut, getEventDateTimeRawInIST } from '../../data/pujaList';
 import { useTranslation } from 'react-i18next';
 import { localizeChadhava } from '../../i18n/cmsText';
-import { getDateLocale, localizePujaRecord, localizeRecord } from '../../i18n/content';
+import { buildTextTranslations, getDateLocale, localizePujaRecord, localizeRecord } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
+import ReviewsFeedback from '../Reviews/ReviewsFeedback';
 import PrasadamCard from '../Prasadam/PrasadamCard';
 import { optimizedImage, optimizedSrcSet } from '../../lib/img';
 import { setExitIntentContext } from '../../lib/exitIntentContext';
@@ -87,27 +88,6 @@ const renderRichText = (text) => {
     </>
   );
 };
-
-// --- Rating helpers ---
-const hashStr = (str) => {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-};
-const RATING_OPTIONS = [4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9];
-const getDynamicRating = (id) =>
-  RATING_OPTIONS[hashStr(String(id || 'x')) % RATING_OPTIONS.length];
-const getDynamicReviewCount = (id) =>
-  80 + (hashStr(String(id || 'x') + 'r') % 420);
-const getRatingAvatars = (id, count = 4) => {
-  const h = hashStr(String(id || 'x') + 'av');
-  return Array.from({ length: count }, (_, i) => ({
-    src: `https://i.pravatar.cc/40?img=${((h + i * 7) % 70) + 1}`,
-  }));
-};
-// ---
 
 // FAQ text lives in i18n: chadhavaDetail.faq{n}q / chadhavaDetail.faq{n}a
 const FAQ_NUMBERS = [1, 2, 3, 4, 5, 6, 7];
@@ -469,6 +449,12 @@ function ChadhavaDetail() {
       addonsTotal: 0,
       grandTotal: total,
       mode: 'chadhava',
+      // Display-only Hindi/Telugu for the English names above (not sent with the booking).
+      textTranslations: buildTextTranslations(
+        { ...detail, offerings },
+        [detail?.title, ...offerings.map((o) => o?.title)],
+        localizeChadhava
+      ),
     };
 
 
@@ -585,39 +571,6 @@ function ChadhavaDetail() {
                   <strong>{t('chadhavaDetail.devoteesCount', { count: detail.devoteesCount || t('chadhavaDetail.many') })}</strong>{' '}
                   {t('chadhavaDetail.devoteesAfter')}
                 </p>
-                {(() => {
-                  const itemId = detail?._id || detail?.id || id;
-                  const rating = getDynamicRating(itemId);
-                  const reviewCount = getDynamicReviewCount(itemId);
-                  const avatars = getRatingAvatars(itemId);
-                  const fullStars = Math.floor(rating);
-                  const hasHalf = rating - fullStars >= 0.3;
-                  return (
-                    <div className="chd-rating-row" aria-label={t('detailCommon.ratingAria', { rating })}>
-                      <div className="chd-rating-avatars">
-                        {avatars.map((av, i) => (
-                          <img key={i} src={av.src} alt="" aria-hidden="true" className="chd-rating-avatar" />
-                        ))}
-                      </div>
-                      <div className="chd-rating-meta">
-                        <span className="chd-rating-stars-wrap" aria-hidden="true">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <span
-                              key={s}
-                              className={`chd-rating-star ${
-                                s <= fullStars ? 'filled' : hasHalf && s === fullStars + 1 ? 'half' : 'empty'
-                              }`}
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </span>
-                        <span className="chd-rating-score">{rating.toFixed(1)}</span>
-                        <span className="chd-rating-count">{t('detailCommon.ratingsCount', { count: reviewCount })}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
             </div>
           </section>
@@ -810,6 +763,14 @@ function ChadhavaDetail() {
               ))}
             </ul>
           </section>
+
+          {/* Reviews & Feedback */}
+          <ReviewsFeedback
+            serviceType="chadhava"
+            matchText={[detail?.title, detail?.shortTitle, detail?.subtitle, detail?.templeName, detail?.description]
+              .filter(Boolean)
+              .join(' ')}
+          />
         </div>
         <Footer />
       </main>

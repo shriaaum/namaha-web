@@ -33,7 +33,7 @@ function PujaFilters({ temples, occasions, value, onChange, onClear }) {
         <select value={value.temple} onChange={set("temple")}>
           <option value="">{t("puja.allTemples", { defaultValue: "All temples" })}</option>
           {temples.map((x) => (
-            <option key={x} value={x}>{x}</option>
+            <option key={x.value} value={x.value}>{x.label}</option>
           ))}
         </select>
       </label>
@@ -43,7 +43,7 @@ function PujaFilters({ temples, occasions, value, onChange, onClear }) {
         <select value={value.occasion} onChange={set("occasion")}>
           <option value="">{t("puja.allOccasions", { defaultValue: "All occasions" })}</option>
           {occasions.map((x) => (
-            <option key={x} value={x}>{x}</option>
+            <option key={x.value} value={x.value}>{x.label}</option>
           ))}
         </select>
       </label>

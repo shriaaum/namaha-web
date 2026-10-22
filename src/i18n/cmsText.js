@@ -1,12 +1,12 @@
 /*
  * Reviewed translations for admin-dashboard (CMS) text, keyed by the exact
- * English source string. Text an admin adds or edits later has no entry and
- * simply shows in English until it is translated here or in the CMS
- * (`record.translations[lang]`, which always wins).
+ * English source string. This is a fallback only: text an admin adds or edits
+ * is translated by namaha-api (src/translation/) and arrives on the record as
+ * `record.translations[lang]`, which always wins. No new entries are needed here.
  */
 import hi from './cms/hi.json';
 import te from './cms/te.json';
-import { localizeRecord } from './content';
+import { localizePujaRecord, localizeRecord, reportMissingTranslations } from './content';
 
 /*
  * English display-only spelling corrections for CMS text (the stored record and
@@ -26,6 +26,20 @@ export function translateCmsText(text, language) {
   const dict = dictionaries[language];
   if (!dict) return text;
   return dict[text] ?? dict[text.trim()] ?? text;
+}
+
+/**
+ * Display text for an English name saved on a booking (Pooja/Chadhava title,
+ * temple). Uses the linked record's stored translations when the booking's
+ * English still matches that record, then the reviewed dictionary.
+ */
+export function translateBookedText(english, record, field, language) {
+  if (typeof english !== 'string' || !english.trim() || language === 'en') return english;
+  if (record && typeof record === 'object' && record[field] === english) {
+    const localized = localizeRecord(localizePujaRecord(record, language), language)?.[field];
+    if (localized && localized !== english) return localized;
+  }
+  return translateCmsText(english, language);
 }
 
 const translateFields = (obj, fields, language) => {
@@ -64,5 +78,7 @@ export function localizeChadhava(item, language) {
       : withEnglish.offerings,
   };
   // CMS-provided translations override the local dictionary.
-  return localizeRecord(translated, language);
+  const localized = localizeRecord(translated, language);
+  reportMissingTranslations('chadhava', item, localized, ['title', 'description', 'templeName', 'templeDescription'], language);
+  return localized;
 }

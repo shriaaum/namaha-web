@@ -1,32 +1,15 @@
 /*
- * Local, reviewed translations for the public records currently returned by
- * /pooja.  Keys are MongoDB document IDs; no translated value is guessed at
- * runtime.  New records must be supplied by the CMS/API before publishing.
+ * Local, reviewed translations for public records, keyed by MongoDB document
+ * ID. These are a fallback only: translations stored on the record by the API
+ * (`record.translations`, kept in sync with the English by namaha-api
+ * src/translation/) always win. An entry is used only while the record's
+ * English `name` still equals its `sourceName`, so renaming a Pooja in admin
+ * can never show the old Pooja's translation.
  */
 const pujas = {
-  '6a30eb847306dfad39bcd94d': {
-    hi: {
-      name: 'महालया विशेष: नव शक्ति आवाहन एवं देवी अनुष्ठान',
-      description: 'माँ काली हर बाधा दूर करें, नकारात्मकता नष्ट करें और आपके जीवन को साहस, समृद्धि, सुरक्षा तथा दिव्य कृपा से भर दें। इस पवित्र कालीघाट पूजा में भाग लें और दिव्य माता का करुणामय आशीर्वाद पाएं।',
-      templeName: 'कालीघाट काली मंदिर, कोलकाता',
-      templeDescription: 'कोलकाता का कालीघाट मंदिर माँ काली को समर्पित सबसे पूजनीय शक्तिपीठों में से एक है। शक्ति भक्तों के लिए इसका अत्यंत आध्यात्मिक महत्व है और देवी का आशीर्वाद पाने हजारों श्रद्धालु यहां आते हैं।\nइस पवित्र महालया देवी पूजा को कालीघाट में करने से श्रद्धालुओं को भक्ति, प्रार्थना और दिव्य माता के प्रति समर्पण के साथ शुभ नवरात्रि काल आरंभ करने का अवसर मिलता है।',
-      aboutPuja: 'महालया के शुभ अवसर पर पूजनीय कालीघाट मंदिर में नव शक्ति आवाहन एवं देवी पूजा में भाग लें। यह विशेष सेवा दिव्य स्त्री शक्ति का आह्वान करने और माँ काली व आदि शक्ति का आशीर्वाद पाने के लिए है।\nपवित्र प्रार्थनाओं, मंत्रोच्चार, अर्पणों और पारंपरिक अनुष्ठानों द्वारा श्रद्धालु देवी की कृपा, रक्षा, शक्ति और परिवार के लिए आशीर्वाद मांगते हैं।\n\nमहालया का महत्व\n\nमहालया नवरात्रि और दुर्गा पूजा से पहले के पवित्र काल की शुरुआत है। यह पारंपरिक रूप से माँ दुर्गा और शक्ति के दिव्य आगमन व स्वागत से जुड़ा है। इस आध्यात्मिक रूप से महत्वपूर्ण समय में देवी की पूजा करना शक्ति, सुरक्षा, समृद्धि और आध्यात्मिक शुद्धि पाने का अवसर माना जाता है।',
-      benefits: ['बाधाओं का निवारण', 'नकारात्मक प्रभावों से रक्षा', 'साहस और आंतरिक शक्ति', 'पारिवारिक सद्भाव', 'समृद्धि और सफलता', 'दिव्य माता का आशीर्वाद'],
-      packages: ['व्यक्तिगत पूजा', 'दो व्यक्ति', 'परिवार', 'संयुक्त परिवार'],
-      addons: ['माता काली तंत्र रक्षा थाली', 'श्रींगार', 'गुड़हल माला']
-    },
-    te: {
-      name: 'మహాలయ ప్రత్యేకం: నవశక్తి ఆవాహన మరియు దేవీ అనుష్ఠానం',
-      description: 'మా కాళి ప్రతి అడ్డంకినీ తొలగించి, ప్రతికూలతను నాశనం చేసి, మీ జీవితాన్ని ధైర్యం, శ్రేయస్సు, రక్షణ, దివ్య కృపతో నింపుగాక. ఈ పవిత్ర కాళీఘాట్ పూజలో పాల్గొని దివ్య మాత కరుణామయ ఆశీర్వాదాలు పొందండి.',
-      templeName: 'కాళీఘాట్ కాళి దేవాలయం, కోల్‌కతా',
-      templeDescription: 'కోల్‌కతాలోని కాళీఘాట్ దేవాలయం మా కాళికి అంకితమైన అత్యంత పూజనీయ శక్తిపీఠాలలో ఒకటి. శక్తి భక్తులకు ఈ దేవాలయానికి అపార ఆధ్యాత్మిక ప్రాధాన్యం ఉంది; దేవి ఆశీర్వాదాల కోసం వేలాది భక్తులు సందర్శిస్తారు.\nకాళీఘాట్‌లో ఈ పవిత్ర మహాలయ దేవి పూజ చేయడం ద్వారా భక్తి, ప్రార్థన, దివ్య మాతకు సమర్పణతో శుభ నవరాత్రి కాలాన్ని ప్రారంభించే అవకాశం లభిస్తుంది.',
-      aboutPuja: 'మహాలయ శుభ సందర్భంలో పూజనీయ కాళీఘాట్ దేవాలయంలో నవశక్తి ఆవాహన మరియు దేవి పూజలో పాల్గొనండి. ఈ ప్రత్యేక సేవ దివ్య స్త్రీ శక్తిని ఆవాహన చేయడానికి, మా కాళి మరియు ఆదిశక్తి ఆశీర్వాదాలు పొందడానికి అంకితం.\nపవిత్ర ప్రార్థనలు, మంత్రోచ్చారణలు, సమర్పణలు, సాంప్రదాయ ఆచారాల ద్వారా భక్తులు దేవి కృప, రక్షణ, శక్తి, కుటుంబ శ్రేయస్సు కోరుకుంటారు.\n\nమహాలయ ప్రాముఖ్యత\n\nమహాలయ నవరాత్రి, దుర్గాపూజలకు ముందు పవిత్ర కాల ప్రారంభాన్ని సూచిస్తుంది. ఇది మా దుర్గ, శక్తి దివ్య సాన్నిధ్యాన్ని ఆహ్వానించి స్వాగతించే సంప్రదాయంతో ముడిపడి ఉంది. ఈ ఆధ్యాత్మికంగా ముఖ్యమైన సమయంలో దేవిని ఆరాధించడం శక్తి, రక్షణ, శ్రేయస్సు, ఆధ్యాత్మిక శుద్ధి పొందే అవకాశంగా భావిస్తారు.',
-      benefits: ['అడ్డంకుల తొలగింపు', 'ప్రతికూల ప్రభావాల నుంచి రక్షణ', 'ధైర్యం మరియు అంతర్గత బలం', 'కుటుంబ సామరస్యం', 'శ్రేయస్సు మరియు విజయం', 'దివ్య మాత ఆశీర్వాదాలు'],
-      packages: ['వ్యక్తిగత పూజ', 'ఇద్దరు వ్యక్తులు', 'కుటుంబం', 'ఉమ్మడి కుటుంబం'],
-      addons: ['మాత కాళి తంత్ర రక్షా తాళి', 'శ్రింగార్', 'మందార మాల']
-    }
-  },
   '69c2947b095055003ca4a43a': {
+    // Applied only while the record's English name is still this (see localizePujaRecord).
+    sourceName: 'Maha Navami Special: Adya Kalika Mata Kali Pujan & Kanya Bhoj',
     hi: {
       name: 'महा नवमी विशेष: आद्या कालिका माता काली पूजन एवं कन्या भोज',
       description: 'दक्षिणेश्वरी में यह पवित्र महा नवमी काली पूजा एवं कन्या भोज करने से श्रद्धालु माँ काली को प्रार्थना अर्पित कर सुरक्षा, समृद्धि, शक्ति और आध्यात्मिक कल्याण के लिए उनका दिव्य आशीर्वाद पाते हैं।',
@@ -50,8 +33,10 @@ const pujas = {
 
 export function localizePujaRecord(record, language) {
   if (language === 'en' || !record) return record;
-  const translated = pujas[String(record._id || record.id)]?.[language];
+  const entry = pujas[String(record._id || record.id)];
+  const translated = entry?.[language];
   if (!translated) return record;
+  if (record.name && entry.sourceName && record.name.trim() !== entry.sourceName) return record;
   return {
     ...record,
     name: translated.name,
@@ -65,24 +50,86 @@ export function localizePujaRecord(record, language) {
   };
 }
 
-/** Generic CMS translation resolver. Array translations are keyed by `_id`. */
-const mergeTranslatedArray = (items, translatedItems) => (items || []).map((item) => ({
+/**
+ * Generic CMS translation resolver. Array translations are keyed by the item's
+ * `_id` (Pooja) or, for items without one (Chadhava benefits/offerings), by
+ * index — the same keys namaha-api src/translation/ writes.
+ */
+const mergeTranslatedArray = (items, translatedItems) => (items || []).map((item, index) => ({
   ...item,
-  ...(translatedItems?.[String(item?._id || item?.id)] || {}),
+  ...(translatedItems?.[String(item?._id || item?.id || index)] || {}),
 }));
 
 export function localizeRecord(record, language) {
   if (!record || language === 'en') return record;
   const translated = record.translations?.[language];
   if (!translated) return record;
+  const { categoryName, ...fields } = translated;
   return {
     ...record,
-    ...translated,
+    ...fields,
+    ...(categoryName && record.category && typeof record.category === 'object'
+      ? { category: { ...record.category, category: categoryName } }
+      : {}),
     benefits: mergeTranslatedArray(record.benefits, translated.benefits),
     addOns: mergeTranslatedArray(record.addOns, translated.addOns),
     packageDetails: mergeTranslatedArray(record.packageDetails, translated.packageDetails),
     offerings: mergeTranslatedArray(record.offerings, translated.offerings),
   };
+}
+
+/* ----- Missing-translation reporting ----------------------------------------
+ * When Hindi/Telugu is selected and a field still equals its English source,
+ * the English is shown (never blank) and the gap is recorded here. The API
+ * tracks the same gaps per record (GET /api/admin/translations/status) and
+ * retries them; this is the client-side safety net for QA and tests.
+ */
+const missingTranslations = new Map();
+const hasLatinWords = (value) => typeof value === 'string' && /[A-Za-z]{2,}/.test(value);
+
+export function reportMissingTranslations(kind, english, localized, fields, language) {
+  if (!english || !localized || language === 'en') return;
+  const id = String(english._id || english.id || english.title || english.name || '');
+  const fieldsMissing = fields.filter((field) => hasLatinWords(english[field]) && localized[field] === english[field]);
+  const key = `${language}:${kind}:${id}`;
+  if (!fieldsMissing.length) {
+    missingTranslations.delete(key);
+    return;
+  }
+  const previous = missingTranslations.get(key);
+  missingTranslations.set(key, { language, kind, id, fields: fieldsMissing });
+  if (!previous && process.env.NODE_ENV === 'development') {
+    console.warn(`[i18n] Missing ${language} translation for ${kind} ${id}: ${fieldsMissing.join(', ')} (showing English)`);
+  }
+}
+
+export const getMissingTranslations = () => [...missingTranslations.values()];
+export const clearMissingTranslations = () => missingTranslations.clear();
+
+/**
+ * Small { hi: { english: text }, te: {...} } lookup for chosen English strings
+ * of a record (title, add-on / offering names), so pages that only receive
+ * English names (Billing) can show them translated and switch language live.
+ */
+export function buildTextTranslations(record, englishTexts, localize, languages = ['hi', 'te']) {
+  const wanted = new Set((englishTexts || []).filter((text) => typeof text === 'string' && text.trim()));
+  const out = {};
+  if (!record || !wanted.size) return out;
+  languages.forEach((language) => {
+    const localized = localize(record, language) || record;
+    const map = {};
+    const pair = (en, tr) => {
+      if (wanted.has(en) && typeof tr === 'string' && tr.trim() && tr !== en) map[en] = tr;
+    };
+    Object.keys(record).forEach((field) => pair(record[field], localized[field]));
+    ['benefits', 'addOns', 'packageDetails', 'offerings'].forEach((arrayName) => {
+      (Array.isArray(record[arrayName]) ? record[arrayName] : []).forEach((item, index) => {
+        Object.keys(item || {}).forEach((field) => pair(item[field], localized[arrayName]?.[index]?.[field]));
+      });
+    });
+    out[language] = map;
+  });
+  return out;
 }
 
 const DATE_LOCALES = { en: 'en-GB', hi: 'hi-IN', te: 'te-IN' };
@@ -142,5 +189,6 @@ export function localizeHeroBanner(banner, language) {
   const merged = { ...banner, ...local, ...cms };
   // The API repeats subtitle in `description`; keep them in sync when only subtitle is translated.
   if ((local.subtitle || cms.subtitle) && !cms.description) merged.description = merged.subtitle;
+  reportMissingTranslations('heroBanner', banner, merged, ['title', 'description', 'ctaLabel'], language);
   return merged;
 }

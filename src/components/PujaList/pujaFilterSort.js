@@ -4,16 +4,26 @@ export const SORT_OPTIONS = ["date", "popularity", "topChoice", "name"];
 
 const clean = (v) => String(v || "").trim();
 
-export const getOccasion = (puja) => clean(puja?.occasion) || clean(puja?.category);
+// Filter values are the English text (stable across languages and in shared
+// URLs); option labels are the text shown in the current language.
+export const getOccasion = (puja) => clean(puja?.occasion) || clean(puja?.categoryEn || puja?.category);
+const getOccasionLabel = (puja) => clean(puja?.occasion) || clean(puja?.category);
+const getTemple = (puja) => clean(puja?.templeNameEn || puja?.templeName);
 
-const uniqueSorted = (values) =>
-  [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+const uniqueOptions = (pujas, getValue, getLabel) => {
+  const labels = new Map();
+  pujas.forEach((p) => {
+    const value = getValue(p);
+    if (value && !labels.has(value)) labels.set(value, getLabel(p) || value);
+  });
+  return [...labels].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+};
 
 export const getTempleOptions = (pujas) =>
-  uniqueSorted(pujas.map((p) => clean(p.templeName)));
+  uniqueOptions(pujas, getTemple, (p) => clean(p.templeName));
 
 export const getOccasionOptions = (pujas) =>
-  uniqueSorted(pujas.map(getOccasion));
+  uniqueOptions(pujas, getOccasion, getOccasionLabel);
 
 /**
  * `pujas` is expected to already be in the default (availability + date) order;
@@ -23,7 +33,7 @@ export const getOccasionOptions = (pujas) =>
 export function applyPujaFilters(pujas, { temple = "", occasion = "", sort = "date" } = {}) {
   let out = pujas.filter(
     (p) =>
-      (!temple || clean(p.templeName) === temple) &&
+      (!temple || getTemple(p) === temple) &&
       (!occasion || getOccasion(p) === occasion)
   );
 

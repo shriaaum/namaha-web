@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { translateBookedText, translateCmsText } from "../../i18n/cmsText";
+import { getDateLocale } from "../../i18n/content";
 import BookingDetailsModal from "../BookingDetailsModal/BookingDetailsModal";
 import "./MyBooking.css";
 
 function MyBookings() {
+  const { t, i18n } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,11 +18,7 @@ function MyBookings() {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -30,11 +32,15 @@ function MyBookings() {
       setBookings(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Error fetching bookings:", err);
-      setError(err.response?.data?.message || "Failed to load bookings");
+      setError(err.response?.data?.message || tRef.current("myBookings.loadFailed"));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
   const handleViewBooking = (bookingId) => {
     setSelectedBookingId(bookingId);
@@ -60,16 +66,16 @@ function MyBookings() {
   };
 
   const getStatusText = (status) => {
-    const textMap = {
-      pending: "Pending",
-      panditAccepted: "Accepted",
-      inProgress: "Ongoing",
-      completed: "Completed",
-      expired: "Expired",
-      cancelled: "Cancelled",
-      panditRejected: "Rejected",
+    const keyMap = {
+      pending: "myBookings.statusPending",
+      panditAccepted: "myBookings.statusAccepted",
+      inProgress: "myBookings.statusOngoing",
+      completed: "myBookings.statusCompleted",
+      expired: "myBookings.statusExpired",
+      cancelled: "myBookings.statusCancelled",
+      panditRejected: "myBookings.statusRejected",
     };
-    return textMap[status] || status;
+    return keyMap[status] ? t(keyMap[status]) : status;
   };
 
   const formatDate = (dateStr) => {
@@ -77,14 +83,14 @@ function MyBookings() {
     if (dateStr.includes("/")) {
       const [day, month, year] = dateStr.split("/");
       const date = new Date(year, month - 1, day);
-      return date.toLocaleDateString("en-GB", {
+      return date.toLocaleDateString(getDateLocale(i18n.language), {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
       });
     }
     const date = new Date(dateStr);
-    return isNaN(date.getTime()) ? dateStr : date.toLocaleDateString("en-GB", {
+    return isNaN(date.getTime()) ? dateStr : date.toLocaleDateString(getDateLocale(i18n.language), {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -99,8 +105,12 @@ function MyBookings() {
     const categoryName = typeof category === "object" ? category?.category ?? category?.name : null;
     return {
       id: b._id ?? b.id,
-      name: pujaObj?.title ?? pujaObj?.name ?? "Puja Booking",
-      packageName: selectedPkg?.name ?? categoryName ?? "N/A",
+      name: pujaObj?.title
+        ? translateBookedText(pujaObj.title, pujaObj, "title", i18n.language)
+        : pujaObj?.name
+          ? translateBookedText(pujaObj.name, pujaObj, "name", i18n.language)
+          : t("myBookings.fallbackTitle"),
+      packageName: translateCmsText(selectedPkg?.name ?? categoryName, i18n.language) ?? t("myBookings.notAvailable"),
       date: b.date,
       slotStart: b.slots?.[0]?.start,
       duration: b.duration ?? selectedPkg?.duration ?? "—",
@@ -114,7 +124,7 @@ function MyBookings() {
       <div className="bookings-container">
         <div className="loading-spinner">
           <div className="spinner"></div>
-          <p>Loading your bookings...</p>
+          <p>{t("myBookings.loading")}</p>
         </div>
       </div>
     );
@@ -125,7 +135,7 @@ function MyBookings() {
       <div className="bookings-container">
         <div className="error-message">
           <p>❌ {error}</p>
-          <button onClick={fetchBookings}>Try Again</button>
+          <button onClick={fetchBookings}>{t("common.tryAgain")}</button>
         </div>
       </div>
     );
@@ -134,15 +144,15 @@ function MyBookings() {
   return (
     <div className="bookings-container">
       <div className="bookings-header">
-        <h1>My Puja Bookings</h1>
+        <h1>{t("nav.myBookings")}</h1>
         <p className="bookings-count">
-          {bookings.length} {bookings.length === 1 ? 'booking' : 'bookings'}
+          {t("myBookings.count", { count: bookings.length })}
         </p>
       </div>
 
       {/* Bookings List */}
       {bookings.length === 0 ? (
-        <p>No bookings found</p>
+        <p>{t("myBookings.empty")}</p>
       ) : (
         <div className="bookings-grid">
           {bookings.map((booking) => {
@@ -155,7 +165,7 @@ function MyBookings() {
 
                 <div className="booking-content">
                   <h3 className="puja-name">{d.name}</h3>
-                  <p className="puja-deity">Package: {d.packageName}</p>
+                  <p className="puja-deity">{t("myBookings.packageLabel", { name: d.packageName })}</p>
 
                   <div className="booking-datetime">
                     <div className="datetime-item">
@@ -177,7 +187,7 @@ function MyBookings() {
                   </div>
 
                   <div className={`mode-badge ${d.mode === "online" ? "mode-online" : "mode-offline"}`}>
-                    {d.mode === "online" ? "🖥️ Online" : "📍 Offline"}
+                    {d.mode === "online" ? `🖥️ ${t("myBookings.modeOnline")}` : `📍 ${t("myBookings.modeOffline")}`}
                   </div>
 
                   <div className="booking-price">
@@ -188,7 +198,7 @@ function MyBookings() {
                     className="view-btn"
                     onClick={() => handleViewBooking(d.id || booking._id)}
                   >
-                    View Details
+                    {t("common.viewDetails")}
                   </button>
                 </div>
               </div>

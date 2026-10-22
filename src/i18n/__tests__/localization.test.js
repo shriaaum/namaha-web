@@ -79,8 +79,8 @@ describe('localizeChadhava', () => {
 
 describe('localizePujaRecord / localizeRecord', () => {
   const puja = {
-    _id: '6a30eb847306dfad39bcd94d',
-    name: 'Mahalaya Special',
+    _id: '69c2947b095055003ca4a43a',
+    name: 'Maha Navami Special: Adya Kalika Mata Kali Pujan & Kanya Bhoj',
     benefits: [{ _id: 'b1', title: 'Removal of Obstacles' }],
     addOns: [{ _id: 'a1', name: 'Thali', price: 301 }],
     packageDetails: [{ _id: 'p1', name: 'Individual', price: 801 }],
@@ -98,6 +98,11 @@ describe('localizePujaRecord / localizeRecord', () => {
     expect(out.addOns[0].price).toBe(301);
     expect(out.packageDetails[0].price).toBe(801);
     expect(out._id).toBe(puja._id);
+  });
+
+  test('a reviewed puja renamed in admin no longer gets the old translation', () => {
+    const renamed = { ...puja, name: 'Diwali Kali Puja Special' };
+    expect(localizePujaRecord(renamed, 'hi')).toBe(renamed);
   });
 
   test('an unknown puja stays in English', () => {

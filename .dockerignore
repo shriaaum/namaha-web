@@ -2,3 +2,5 @@ node_modules
 build
 design-assets
 .git
+.env
+.env.*

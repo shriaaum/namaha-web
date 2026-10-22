@@ -1,8 +1,30 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { translateBookedText, translateCmsText } from "../../i18n/cmsText";
+import { getDateLocale } from "../../i18n/content";
 import "./BookingDetailsModal.css";
 
+const STATUS_KEYS = {
+  pending: "myBookings.statusPending",
+  panditAccepted: "myBookings.statusAccepted",
+  inProgress: "myBookings.statusOngoing",
+  completed: "myBookings.statusCompleted",
+  expired: "myBookings.statusExpired",
+  cancelled: "myBookings.statusCancelled",
+  panditRejected: "myBookings.statusRejected",
+};
+const PAYMENT_STATUS_KEYS = {
+  success: "myBookings.paymentSuccess",
+  paid: "myBookings.paymentSuccess",
+  captured: "myBookings.paymentSuccess",
+  pending: "myBookings.paymentPending",
+  failed: "myBookings.paymentFailed",
+};
+const MODE_KEYS = { online: "myBookings.modeOnline", offline: "myBookings.modeOffline", hybrid: "myBookings.modeHybrid" };
+
 function BookingDetailsModal({ bookingId, onClose }) {
+  const { t, i18n } = useTranslation();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,11 +50,11 @@ function BookingDetailsModal({ bookingId, onClose }) {
       );
     } catch (err) {
       console.error("Error fetching booking details:", err);
-      setError(err.response?.data?.message || "Failed to load booking details");
+      setError(err.response?.data?.message || t("myBookings.detailsLoadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [bookingId]);
+  }, [bookingId, t]);
 
   useEffect(() => {
     if (bookingId) {
@@ -47,7 +69,7 @@ function BookingDetailsModal({ bookingId, onClose }) {
     const [day, month, year] = parts;
     const date = new Date(year, month - 1, day);
     if (Number.isNaN(date.getTime())) return dateStr;
-    return date.toLocaleDateString("en-GB", {
+    return date.toLocaleDateString(getDateLocale(i18n.language), {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -85,8 +107,12 @@ function BookingDetailsModal({ bookingId, onClose }) {
 
   if (!bookingId) return null;
 
-  const normalizedStatus =
-    booking?.status?.charAt(0).toUpperCase() + booking?.status?.slice(1) || "";
+  const normalizedStatus = STATUS_KEYS[booking?.status]
+    ? t(STATUS_KEYS[booking.status])
+    : booking?.status?.charAt(0).toUpperCase() + booking?.status?.slice(1) || "";
+  const linkedPooja = booking?.poojaId && typeof booking.poojaId === "object" ? booking.poojaId : booking?.pooja;
+  const translateText = (english, field = "name") => translateBookedText(english, linkedPooja, field, i18n.language);
+  const modeText = (mode) => (MODE_KEYS[mode] ? t(MODE_KEYS[mode]) : mode);
 
   const displayOrderId =
     booking?.razorpayOrderId ||
@@ -100,8 +126,10 @@ function BookingDetailsModal({ bookingId, onClose }) {
     booking?.payment?.paymentId ||
     "-";
 
-  const displayPaymentStatus =
-    booking?.paymentStatus || booking?.payment?.status || "-";
+  const rawPaymentStatus = booking?.paymentStatus || booking?.payment?.status || "-";
+  const displayPaymentStatus = PAYMENT_STATUS_KEYS[String(rawPaymentStatus).toLowerCase()]
+    ? t(PAYMENT_STATUS_KEYS[String(rawPaymentStatus).toLowerCase()])
+    : rawPaymentStatus;
 
   return (
     <div className="modal-backdrop" onClick={handleBackdropClick}>
@@ -114,22 +142,22 @@ function BookingDetailsModal({ bookingId, onClose }) {
         {loading ? (
           <div className="modal-loading">
             <div className="spinner"></div>
-            <p>Loading details...</p>
+            <p>{t("myBookings.detailsLoading")}</p>
           </div>
         ) : error ? (
           <div className="modal-error">
             <p>❌ {error}</p>
-            <button onClick={fetchBookingDetails}>Retry</button>
+            <button onClick={fetchBookingDetails}>{t("common.retry")}</button>
           </div>
         ) : booking ? (
           <div className="modal-body">
             {/* Header */}
             <div className="modal-header">
               <h2>
-                {booking.bookingSnapshot?.puja?.title ||
-                  booking.pooja?.name ||
-                  booking.pooja?.title ||
-                  "Puja Booking"}
+                {translateText(booking.bookingSnapshot?.puja?.title) ||
+                  translateText(booking.pooja?.name) ||
+                  translateText(booking.pooja?.title, "title") ||
+                  t("myBookings.fallbackTitle")}
               </h2>
               <span 
                 className="modal-status-badge"
@@ -149,41 +177,40 @@ function BookingDetailsModal({ bookingId, onClose }) {
             <div className="info-grid">
               {/* Puja & Date */}
               <div className="info-card">
-                <h3>📅 Puja & Date</h3>
+                <h3>📅 {t("myBookings.pujaAndDate")}</h3>
                 <p className="info-value">{formatDate(booking.date)}</p>
                 <p className="info-label">
-                  {booking.bookingSnapshot?.puja?.templeName ||
+                  {translateText(booking.bookingSnapshot?.puja?.templeName, "templeName") ||
                     booking.bookingSnapshot?.puja?.location}
                 </p>
                 <p className="info-label">
-                  Mode:{" "}
-                  {booking.bookingSnapshot?.puja?.mode ||
-                    booking.pooja?.mode ||
-                    "-"}
+                  {t("myBookings.modeLabel", {
+                    mode: modeText(booking.bookingSnapshot?.puja?.mode || booking.pooja?.mode) || "-",
+                  })}
                 </p>
               </div>
 
               {/* Package Details */}
               <div className="info-card">
-                <h3>📦 Package</h3>
+                <h3>📦 {t("myBookings.packageTitle")}</h3>
                 <p className="info-value">
-                  {booking.bookingSnapshot?.selectedPackage?.name || "-"}
+                  {translateCmsText(booking.bookingSnapshot?.selectedPackage?.name, i18n.language) || "-"}
                 </p>
                 <p className="info-label">
-                  Price: ₹
-                  {booking.bookingSnapshot?.selectedPackage?.price ??
-                    booking.price}
+                  {t("myBookings.priceLabel", {
+                    amount: booking.bookingSnapshot?.selectedPackage?.price ?? booking.price,
+                  })}
                 </p>
                 {booking.bookingSnapshot?.selectedPackage?.persons && (
                   <p className="info-label">
-                    Persons: {booking.bookingSnapshot.selectedPackage.persons}
+                    {t("myBookings.personsLabel", { n: booking.bookingSnapshot.selectedPackage.persons })}
                   </p>
                 )}
               </div>
 
               {/* Price & Payment Status */}
               <div className="info-card">
-                <h3>💰 Price</h3>
+                <h3>💰 {t("myBookings.priceTitle")}</h3>
                 <p className="info-value">
                   ₹
                   {(booking.bookingSnapshot?.grandTotal ?? booking.price)?.toLocaleString(
@@ -191,23 +218,21 @@ function BookingDetailsModal({ bookingId, onClose }) {
                   )}
                 </p>
                 <p className="info-label">
-                  Payment status: {displayPaymentStatus}
+                  {t("myBookings.paymentStatusLabel", { status: displayPaymentStatus })}
                 </p>
               </div>
 
               {/* Payment Details */}
               <div className="info-card">
-                <h3>💳 Payment</h3>
+                <h3>💳 {t("myBookings.paymentTitle")}</h3>
                 <p className="info-label">
-                  Order ID:{" "}
-                  {displayOrderId}
+                  {t("myBookings.orderIdLabel", { id: displayOrderId })}
                 </p>
                 <p className="info-label">
-                  Payment ID:{" "}
-                  {displayPaymentId}
+                  {t("myBookings.paymentIdLabel", { id: displayPaymentId })}
                 </p>
                 <p className="info-label">
-                  Status: {displayPaymentStatus}
+                  {t("myBookings.statusLabel", { status: displayPaymentStatus })}
                 </p>
                 {invoiceUrl && (
                   <p className="info-label">
@@ -216,7 +241,7 @@ function BookingDetailsModal({ bookingId, onClose }) {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      View Invoice PDF
+                      {t("myBookings.viewInvoice")}
                     </a>
                   </p>
                 )}
@@ -226,30 +251,30 @@ function BookingDetailsModal({ bookingId, onClose }) {
             {/* Devotee Details */}
             {booking.devoteeDetails && (
               <div className="section-card">
-                <h3>👥 Devotee Details</h3>
+                <h3>👥 {t("myBookings.devoteeDetails")}</h3>
                 <div className="detail-row">
-                  <span>Name:</span>
+                  <span>{t("myBookings.nameLabel")}</span>
                   <span>{booking.devoteeDetails.name}</span>
                 </div>
                 <div className="detail-row">
-                  <span>Mobile:</span>
+                  <span>{t("myBookings.mobileLabel")}</span>
                   <span>{booking.devoteeDetails.phone}</span>
                 </div>
                 {booking.devoteeDetails.email && (
                   <div className="detail-row">
-                    <span>Email:</span>
+                    <span>{t("myBookings.emailLabel")}</span>
                     <span>{booking.devoteeDetails.email}</span>
                   </div>
                 )}
                 {booking.devoteeDetails.gotra && (
                   <div className="detail-row">
-                    <span>Gotra:</span>
+                    <span>{t("myBookings.gotraLabel")}</span>
                     <span>{booking.devoteeDetails.gotra}</span>
                   </div>
                 )}
                 {booking.devoteeDetails.address && (
                   <div className="detail-row">
-                    <span>Address:</span>
+                    <span>{t("myBookings.addressLabel")}</span>
                     <span>{booking.devoteeDetails.address}</span>
                   </div>
                 )}
@@ -259,15 +284,15 @@ function BookingDetailsModal({ bookingId, onClose }) {
             {/* Participant Details */}
             {booking.participants && booking.participants.length > 0 && (
               <div className="section-card">
-                <h3>🧑‍🤝‍🧑 Participant Details</h3>
+                <h3>🧑‍🤝‍🧑 {t("myBookings.participantDetails")}</h3>
                 {booking.participants.map((p, index) => (
                   <div key={p._id || index} className="detail-row">
                     <span>
                       {index + 1}. {p.name || "-"}
                     </span>
                     <span>
-                      {p.nakshatra && `Nakshatra: ${p.nakshatra} `}
-                      {p.gotra && `| Gotra: ${p.gotra}`}
+                      {p.nakshatra && `${t("myBookings.nakshatraValue", { value: p.nakshatra })} `}
+                      {p.gotra && `| ${t("myBookings.gotraValue", { value: p.gotra })}`}
                     </span>
                   </div>
                 ))}
@@ -277,17 +302,17 @@ function BookingDetailsModal({ bookingId, onClose }) {
             {/* Puja Details */}
             {booking.bookingSnapshot?.puja && (
               <div className="section-card">
-                <h3>🕉️ Puja Details</h3>
+                <h3>🕉️ {t("myBookings.pujaDetails")}</h3>
                 <div className="detail-row">
-                  <span>Temple:</span>
-                  <span>{booking.bookingSnapshot.puja.templeName}</span>
+                  <span>{t("myBookings.templeLabel")}</span>
+                  <span>{translateText(booking.bookingSnapshot.puja.templeName, "templeName")}</span>
                 </div>
                 <div className="detail-row">
-                  <span>Date:</span>
+                  <span>{t("myBookings.dateLabel")}</span>
                   <span>{booking.bookingSnapshot.puja.date}</span>
                 </div>
                 <div className="detail-row">
-                  <span>Duration:</span>
+                  <span>{t("myBookings.durationLabel")}</span>
                   <span>{booking.bookingSnapshot.puja.duration}</span>
                 </div>
               </div>
@@ -295,8 +320,8 @@ function BookingDetailsModal({ bookingId, onClose }) {
 
             {/* Timestamps */}
             <div className="timestamps">
-              <p>Created: {new Date(booking.createdAt).toLocaleString()}</p>
-              <p>Updated: {new Date(booking.updatedAt).toLocaleString()}</p>
+              <p>{t("myBookings.createdLabel", { date: new Date(booking.createdAt).toLocaleString(getDateLocale(i18n.language)) })}</p>
+              <p>{t("myBookings.updatedLabel", { date: new Date(booking.updatedAt).toLocaleString(getDateLocale(i18n.language)) })}</p>
             </div>
           </div>
         ) : null}

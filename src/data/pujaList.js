@@ -1,7 +1,10 @@
 import axiosInstance from "../lib/instance";
 import { useState, useEffect } from "react";
 import i18n from '../i18n';
-import { localizeRecord, localizePujaRecord, getDateLocale } from '../i18n/content';
+import { localizeRecord, localizePujaRecord, getDateLocale, reportMissingTranslations, buildTextTranslations } from '../i18n/content';
+import { localizeChadhava } from '../i18n/cmsText';
+
+const localizePooja = (record, language) => localizeRecord(localizePujaRecord(record, language), language);
 
 /** Grid column count for Puja list + Special Puja cards (see PujaList.css `.pl-cards`, SpecialPuja.css `.sp-cards`). */
 export const PUJA_LIST_GRID_COLUMNS = 4;
@@ -154,7 +157,8 @@ const getChadhavaItemEventDateRaw = (item) => {
 // `chadhavaListRequest` (optional) is an already-started GET /chadhava, so the
 // puja and chadhava requests run in parallel instead of one after the other.
 const mergeMatchedChadhavaOfferings = async (puja, chadhavaListRequest) => {
-  const pujaNameKey = normalizeCompareText(puja?.title || puja?.name);
+  // Match on the English title: the displayed title may be Hindi/Telugu.
+  const pujaNameKey = normalizeCompareText(puja?.titleEn || puja?.title || puja?.name);
   if (!pujaNameKey) return puja;
 
   try {
@@ -182,7 +186,7 @@ const mergeMatchedChadhavaOfferings = async (puja, chadhavaListRequest) => {
         matchedChadhava?.shortTitle ||
         matchedChadhava?.slug;
       if (detailId) {
-        const detailRes = await axiosInstance.get(`/chadhava/${encodeURIComponent(detailId)}`);
+        const detailRes = await cachedGet(`/chadhava/${encodeURIComponent(detailId)}`);
         detailItem =
           detailRes?.data?.item ||
           detailRes?.data?.data?.item ||
@@ -204,17 +208,30 @@ const mergeMatchedChadhavaOfferings = async (puja, chadhavaListRequest) => {
     const chadhavaAddOns = mapChadhavaOfferingsToAddOns(offerings);
     if (!chadhavaAddOns.length) return puja;
 
+    // Offering names: English kept as `nameEn` (booking payload), display text localized.
+    const chadhavaRecord = { ...matchedChadhava, ...(detailItem || {}), offerings };
+    const localizedOfferings = localizeChadhava(chadhavaRecord, i18n.language)?.offerings || [];
+    const localizedNameByEnglish = new Map(
+      offerings.map((o, index) => [o?.title || o?.name, localizedOfferings[index]?.title])
+    );
+    const offeringTexts = buildTextTranslations(chadhavaRecord, offerings.map((o) => o?.title), localizeChadhava);
+
     const existingAddOns = Array.isArray(puja?.addOns) ? puja.addOns : [];
     const existingNames = new Set(
-      existingAddOns.map((a) => normalizeCompareText(a?.name))
+      existingAddOns.map((a) => normalizeCompareText(a?.nameEn || a?.name))
     );
-    const uniqueChadhavaAddOns = chadhavaAddOns.filter(
-      (addon) => !existingNames.has(normalizeCompareText(addon?.name))
-    );
+    const uniqueChadhavaAddOns = chadhavaAddOns
+      .filter((addon) => !existingNames.has(normalizeCompareText(addon?.name)))
+      .map((addon) => ({ ...addon, nameEn: addon.name, name: localizedNameByEnglish.get(addon.name) || addon.name }));
 
     if (!uniqueChadhavaAddOns.length) return puja;
+    const textTranslations = { ...(puja.textTranslations || {}) };
+    Object.entries(offeringTexts).forEach(([language, map]) => {
+      textTranslations[language] = { ...(textTranslations[language] || {}), ...map };
+    });
     return {
       ...puja,
+      textTranslations,
       addOns: [...existingAddOns, ...uniqueChadhavaAddOns],
     };
   } catch (error) {
@@ -231,7 +248,8 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   const source = apiPuja;
   const englishAddonNames = new Map((source.addOns || []).map((a) => [String(a._id), a.name]));
   // Reviewed local translations first; CMS `translations` (when the API sends them) override.
-  apiPuja = localizeRecord(localizePujaRecord(apiPuja, i18n.language), i18n.language);
+  apiPuja = localizePooja(apiPuja, i18n.language);
+  reportMissingTranslations("pooja", source, apiPuja, ["name", "description", "templeName", "templeDescription", "aboutPuja"], i18n.language);
   const ev = apiPuja.eventDate ? new Date(apiPuja.eventDate) : null;
   const fallback = apiPuja.createdAt ? new Date(apiPuja.createdAt) : null;
   const displayDateObj =
@@ -284,9 +302,16 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
     apiPuja.description || "Divine Blessings"
   }`,
   // category: puja type/classification (e.g. GENERAL PUJA, FESTIVAL, WEALTH)
-  category: apiPuja.category?.category?.toUpperCase() || "GENERAL PUJA",
+  category: apiPuja.category?.category?.toUpperCase() || i18n.t("pujaDetail.generalPujaCategory"),
+  categoryEn: source.category?.category?.toUpperCase() || "GENERAL PUJA",
   title: apiPuja.name,
   titleEn: source.name,
+  // Hindi/Telugu for the English names Billing receives (live language switch there).
+  textTranslations: buildTextTranslations(
+    source,
+    [source.name, ...(source.addOns || []).map((a) => a.name), ...(source.packageDetails || []).map((p) => p.name)],
+    localizePooja
+  ),
   location:
     apiPuja.customSection ||
     `${
@@ -310,6 +335,7 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   imageClass: `pl-card-${Math.floor(Math.random() * 3) + 1}`,
   // templeName: temple/venue name (API may return as temple.name, temple.templeName, or templeName)
   templeName: apiPuja.temple?.name || apiPuja.temple?.templeName || apiPuja.templeName || apiPuja.customSection || null,
+  templeNameEn: source.temple?.name || source.temple?.templeName || source.templeName || source.customSection || null,
   templeDescription: apiPuja.templeDescription,
   aboutPuja: apiPuja.aboutPuja,
   description: apiPuja.description || null,
@@ -516,13 +542,30 @@ export function usePujaList() {
 /* =====================================================
    FETCH SINGLE PUJA BY ID - uses GET /api/pooja/:id
 ===================================================== */
+/*
+ * Short-lived cache of raw GET responses used by the Pooja detail page. All
+ * text is localized on the client from the raw record, so switching language
+ * re-maps cached data instantly instead of re-fetching the same records.
+ */
+const RESPONSE_CACHE_MS = 2 * 60 * 1000;
+const responseCache = new Map();
+const cachedGet = (url) => {
+  const hit = responseCache.get(url);
+  if (hit && Date.now() - hit.at < RESPONSE_CACHE_MS) return hit.request;
+  const request = axiosInstance.get(url);
+  responseCache.set(url, { at: Date.now(), request });
+  request.catch(() => responseCache.delete(url)); // never cache failures
+  return request;
+};
+export const clearPujaResponseCache = () => responseCache.clear();
+
 export const fetchPujaById = async (id) => {
   if (!id) return null;
   // Start the chadhava list (needed for the add-on merge) alongside the puja request.
-  const chadhavaListRequest = axiosInstance.get("/chadhava");
+  const chadhavaListRequest = cachedGet("/chadhava");
   chadhavaListRequest.catch(() => {}); // handled inside the merge; avoid unhandled-rejection noise
   try {
-    const response = await axiosInstance.get(`/pooja/${id}`);
+    const response = await cachedGet(`/pooja/${id}`);
     const raw = response.data;
     if (!raw) return null;
     // Handle wrapped responses: { pooja }, { data }, or raw array/object

@@ -7,6 +7,7 @@ import "./PujaDetail.css";
 import DateRequest from "./DateRequest";
 import PrasadamCard from "../Prasadam/PrasadamCard";
 import Footer from "../Footer/Footer";
+import ReviewsFeedback from "../Reviews/ReviewsFeedback";
 import { setExitIntentContext } from "../../lib/exitIntentContext";
 
 const renderRichText = (text) => {
@@ -91,28 +92,6 @@ const SECTION_TABS = [
   { id: "temple", labelKey: "detailTabs.temple" },
   { id: "faqs", labelKey: "detailTabs.faqs" },
 ];
-// --- Rating helpers (deterministic per item id) ---
-const hashStr = (str) => {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-};
-const RATING_OPTIONS = [4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9];
-const getDynamicRating = (id) =>
-  RATING_OPTIONS[hashStr(String(id || "x")) % RATING_OPTIONS.length];
-const getDynamicReviewCount = (id) =>
-  80 + (hashStr(String(id || "x") + "r") % 420);
-
-const getRatingAvatars = (id, count = 4) => {
-  const h = hashStr(String(id || "x") + "av");
-  return Array.from({ length: count }, (_, i) => ({
-    src: `https://i.pravatar.cc/40?img=${((h + i * 7) % 70) + 1}`,
-  }));
-};
-// ---
-
 // Text lives in i18n: pujaDetail.bullet1..3
 const PACKAGE_BULLET_KEYS = ["pujaDetail.bullet1", "pujaDetail.bullet2", "pujaDetail.bullet3"];
 
@@ -196,7 +175,6 @@ function PujaDetail() {
   });
   const [activeTab, setActiveTab] = useState("packages");
   const [openFaq, setOpenFaq] = useState(null);
-  const [isNavSticky, setIsNavSticky] = useState(false);
   const [aboutVisibleLines, setAboutVisibleLines] = useState(() =>
     typeof window !== "undefined" && window.innerWidth <= 768 ? 2 : 7
   );
@@ -207,8 +185,6 @@ function PujaDetail() {
   const [expandedPackageIndex, setExpandedPackageIndex] = useState(null);
 
   const sectionRefs = useRef({});
-  const sectionNavRef = useRef(null);
-  const stickyThresholdRef = useRef(null);
   const aboutTextRef = useRef(null);
 
   const slides = puja?.bannerUrls?.map((img) => img.url) || [];
@@ -308,46 +284,15 @@ function PujaDetail() {
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
-    const nav = sectionNavRef.current;
-    if (nav) {
-      const navTop = nav.getBoundingClientRect().top + window.scrollY;
-      stickyThresholdRef.current = navTop - 82;
-    }
     sectionRefs.current[sectionId]?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
-    setIsNavSticky(true);
   };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const nav = sectionNavRef.current;
-      if (!nav) return;
-      if (!isNavSticky) {
-        const rect = nav.getBoundingClientRect();
-        const navTop = rect.top + window.scrollY;
-        const threshold = navTop - 82;
-        if (window.scrollY >= threshold) {
-          stickyThresholdRef.current = threshold;
-          setIsNavSticky(true);
-        }
-      } else {
-        if (
-          stickyThresholdRef.current != null &&
-          window.scrollY < stickyThresholdRef.current
-        ) {
-          setIsNavSticky(false);
-        }
-      }
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [puja, isNavSticky]);
 
   // Countdown to puja event date (use eventDateRaw when available; fallback to parsing puja.date)
   useEffect(() => {
@@ -535,58 +480,12 @@ function PujaDetail() {
                 <span className="pd-countdown-label-sm">{t("pujaDetail.secs")}</span>
               </div>
             </div>
-            {(() => {
-              const rating = getDynamicRating(puja.id);
-              const reviewCount = getDynamicReviewCount(puja.id);
-              const avatars = getRatingAvatars(puja.id);
-              const fullStars = Math.floor(rating);
-              const hasHalf = rating - fullStars >= 0.3;
-              return (
-                <div className="pd-rating-row" aria-label={t("detailCommon.ratingAria", { rating })}>
-                  <div className="pd-rating-avatars">
-                    {avatars.map((av, i) => (
-                      <img key={i} src={av.src} alt="" aria-hidden="true" className="pd-rating-avatar" />
-                    ))}
-                  </div>
-                  <div className="pd-rating-meta">
-                    <span className="pd-rating-stars-wrap" aria-hidden="true">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <span
-                          key={s}
-                          className={`pd-rating-star ${
-                            s <= fullStars ? "filled" : hasHalf && s === fullStars + 1 ? "half" : "empty"
-                          }`}
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </span>
-                    <span className="pd-rating-score">{rating.toFixed(1)}</span>
-                    <span className="pd-rating-count">{t("detailCommon.ratingsCount", { count: reviewCount })}</span>
-                  </div>
-                </div>
-              );
-            })()}
             {isBookingBlocked ? (
               <div className="pd-booking-closed" role="alert">
                 <span className="pd-booking-closed-icon">🔒</span>
                 <strong>{t("detailCommon.bookingClosedStrong")}</strong> {t("pujaDetail.notAvailable")}
               </div>
             ) : null}
-            {/* <div className="pd-participants">
-              <div className="pd-avatars">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="pd-avatar" />
-                ))}
-              </div>
-              <span className="pd-rating">
-                ⭐ {puja.rating} ({puja.ratingCount} ratings)
-              </span>
-            </div> */}
-            {/* <p className="pd-devotees">
-              Till now <strong>{puja.devoteesCount} Devotees</strong> have
-              participated in Pujas conducted by Shri aaum Puja SHRI AAUM.
-            </p> */}
             <button
               type="button"
               className={`pd-cta ${isBookingBlocked ? "pd-cta--disabled" : ""}`}
@@ -652,12 +551,7 @@ function PujaDetail() {
         </section>
 
         {/* Section tabs */}
-        <nav
-          ref={sectionNavRef}
-          className={`pd-section-nav ${
-            isNavSticky ? "pd-section-nav--fixed" : ""
-          }`}
-        >
+        <nav className="pd-section-nav">
           <div className="pd-section-nav-inner">
             {SECTION_TABS.map((tab) => (
               <button
@@ -673,9 +567,6 @@ function PujaDetail() {
             ))}
           </div>
         </nav>
-        {isNavSticky && (
-          <div className="pd-section-nav-spacer" aria-hidden="true" />
-        )}
 
         {/* Package selection - first section */}
         <section
@@ -800,98 +691,6 @@ function PujaDetail() {
           </div>
         </section>
 
-        {/* Reviews & Ratings */}
-        {/* <section
-          className="pd-section pd-reviews-ratings"
-          ref={(el) => {
-            sectionRefs.current.reviews = el;
-          }}
-        >
-          <div className="pd-section-content">
-            <h2 className="pd-reviews-main-title">Reviews & Ratings</h2>
-            <p className="pd-reviews-subtitle">
-              Read what our beloved devotees have to say about Shri aaum.
-            </p>
-            <div className="pd-testimonials-wrap">
-              <div
-                className="pd-testimonials-track"
-                style={{ transform: `translateX(-${testimonialIndex * 100}%)` }}
-              >
-                {TESTIMONIALS.map((t, i) => (
-                  <div key={i} className="pd-testimonial-card">
-                    {t.type === "video" ? (
-                      <div className="pd-testimonial-video">
-                        <div className="pd-video-placeholder">
-                          ▶ 0:00 / 1:00
-                        </div>
-                        <div className="pd-testimonial-author">
-                          <div className="pd-testimonial-avatar" />
-                          <div>
-                            <strong>{t.name}</strong>
-                            <span>{t.location}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="pd-testimonial-text">{t.text}</p>
-                        <div className="pd-testimonial-author">
-                          <div className="pd-testimonial-avatar" />
-                          <div>
-                            <strong>{t.name}</strong>
-                            <span>{t.location}</span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="pd-testimonial-dots">
-                {TESTIMONIALS.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={i === testimonialIndex ? "active" : ""}
-                    onClick={() => setTestimonialIndex(i)}
-                    aria-label={`Testimonial ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section> */}
-
-        {/* User Reviews */}
-        {/* <section className="pd-section pd-user-reviews">
-          <div className="pd-section-content">
-            <h2 className="pd-section-title">User Reviews</h2>
-            <p className="pd-user-reviews-sub">
-              Reviews from our devotees who booked Puja with us
-            </p>
-            <ul className="pd-user-reviews-list">
-              {USER_REVIEWS.map((r, i) => (
-                <li key={i} className="pd-user-review-item">
-                  <div className="pd-user-review-avatar" />
-                  <div className="pd-user-review-content">
-                    <div className="pd-user-review-meta">
-                      <strong>{r.name}</strong>
-                      <span>{r.date}</span>
-                    </div>
-                    <div className="pd-user-review-stars">
-                      {"★".repeat(r.stars)}
-                    </div>
-                    <p>{r.text}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <button type="button" className="pd-view-more">
-              View More
-            </button>
-          </div>
-        </section> */}
-
         {/* FAQs */}
         <section
           className="pd-section pd-faqs"
@@ -924,6 +723,11 @@ function PujaDetail() {
             </ul>
           </div>
         </section>
+
+        {/* Reviews & Feedback */}
+        <div className="pd-section-content">
+          <ReviewsFeedback serviceType="puja" />
+        </div>
       </div>
       <Footer />
 
