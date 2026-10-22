@@ -96,7 +96,8 @@ const SECTION_TABS = [
 // Text lives in i18n: pujaDetail.bullet1..3
 const PACKAGE_BULLET_KEYS = ["pujaDetail.bullet1", "pujaDetail.bullet2", "pujaDetail.bullet3"];
 
-// pkg.name stays English (image lookup + booking payload); only the label is translated.
+// Fallback package labels are translated through i18next. Admin-managed package
+// names arrive already localized from the stored record translations.
 const PACKAGE_LABEL_KEYS = {
   Individual: "pujaDetail.pkgIndividual",
   Couple: "pujaDetail.pkgCouple",
@@ -133,15 +134,22 @@ price:
             : Number(pkg.price),
         persons: pkg.persons || 1,
       };
-      return { ...base, name: getPackageDisplayName(base) };
+      return {
+        ...base,
+        // Keep the actual admin-managed package name. Replacing it with a
+        // generic English "Family"/"Couple" label hid valid CMS translations.
+        name: base.name || getPackageDisplayName(base),
+        imageKey: getPackageDisplayName(base),
+        isFallbackPackage: false,
+      };
     });
   }
 
   return [
-    { id: "individual", name: "Individual", price: 851, persons: 1 },
-    { id: "partner", name: "Couple", price: 1251, persons: 2 },
-    { id: "family", name: "Family", price: 2001, persons: 4 },
-    { id: "joint", name: "Joint Family", price: 3001, persons: 6 },
+    { id: "individual", name: "Individual", imageKey: "Individual", price: 851, persons: 1, isFallbackPackage: true },
+    { id: "partner", name: "Couple", imageKey: "Couple", price: 1251, persons: 2, isFallbackPackage: true },
+    { id: "family", name: "Family", imageKey: "Family", price: 2001, persons: 4, isFallbackPackage: true },
+    { id: "joint", name: "Joint Family", imageKey: "Joint Family", price: 3001, persons: 6, isFallbackPackage: true },
   ];
 };
 
@@ -161,7 +169,11 @@ function PujaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const packageLabel = (pkg) => (PACKAGE_LABEL_KEYS[pkg?.name] ? t(PACKAGE_LABEL_KEYS[pkg.name]) : pkg?.name);
+  const packageLabel = (pkg) => (
+    pkg?.isFallbackPackage && PACKAGE_LABEL_KEYS[pkg?.name]
+      ? t(PACKAGE_LABEL_KEYS[pkg.name])
+      : pkg?.name
+  );
 
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -617,7 +629,7 @@ function PujaDetail() {
                   <div
                     className="pd-package-image-wrap"
                     style={{
-                      backgroundImage: `url(${pkg.image || PACKAGE_IMAGES[pkg.name] || "https://www.shutterstock.com/image-photo/modern-women-wear-fancy-saree-260nw-2575893271.jpg"})`,
+                      backgroundImage: `url(${pkg.image || PACKAGE_IMAGES[pkg.imageKey] || "https://www.shutterstock.com/image-photo/modern-women-wear-fancy-saree-260nw-2575893271.jpg"})`,
                     }}
                   />
                   <span className="pd-package-price-tag">₹{pkg.price?.toLocaleString("en-IN")}</span>

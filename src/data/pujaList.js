@@ -249,7 +249,7 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   const englishAddonNames = new Map((source.addOns || []).map((a) => [String(a._id), a.name]));
   // Reviewed local translations first; CMS `translations` (when the API sends them) override.
   apiPuja = localizePooja(apiPuja, i18n.language);
-  reportMissingTranslations("pooja", source, apiPuja, ["name", "description", "templeName", "templeDescription", "aboutPuja"], i18n.language);
+  reportMissingTranslations("pooja", source, apiPuja, ["name", "description", "templeName", "templeDescription", "aboutPuja", "duration"], i18n.language);
   const ev = apiPuja.eventDate ? new Date(apiPuja.eventDate) : null;
   const fallback = apiPuja.createdAt ? new Date(apiPuja.createdAt) : null;
   const displayDateObj =

@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { localizeRecord } from "../../i18n/content";
 import "./Prasadam.css";
 
 let productCache = null;
 
 /** Fetches the standalone Prasadam product once per page load (shared by every card). */
 export function usePrasadamProduct() {
+  const { i18n } = useTranslation();
   const [product, setProduct] = useState(productCache);
   useEffect(() => {
     if (productCache) return;
@@ -23,7 +25,7 @@ export function usePrasadamProduct() {
       cancelled = true;
     };
   }, []);
-  return product;
+  return localizeRecord(product, i18n.language);
 }
 
 /**

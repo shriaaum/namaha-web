@@ -117,6 +117,20 @@ describe('localizePujaRecord / localizeRecord', () => {
     expect(out.addOns[0]).toEqual({ _id: 'a1', name: 'తాళి', price: 301 });
     expect(out.packageDetails[0].name).toBe('Individual');
   });
+
+  test('uses the API-stored locale selected by the customer and preserves business data', () => {
+    const category = {
+      _id: 'local-admin-category',
+      category: 'Sacred Temple Celebration',
+      section: 'occasion',
+      translations: { hi: { category: 'पवित्र मंदिर समारोह' }, te: { category: 'పవిత్ర ఆలయం వేడుక' } },
+    };
+    expect(localizeRecord(category, 'en').category).toBe('Sacred Temple Celebration');
+    expect(localizeRecord(category, 'hi').category).toBe('पवित्र मंदिर समारोह');
+    expect(localizeRecord(category, 'te').category).toBe('పవిత్ర ఆలయం వేడుక');
+    expect(localizeRecord(category, 'te')._id).toBe('local-admin-category');
+    expect(localizeRecord(category, 'te').section).toBe('occasion');
+  });
 });
 
 describe('localizeHeroBanner and getDateLocale', () => {

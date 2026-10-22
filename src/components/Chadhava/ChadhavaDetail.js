@@ -4,7 +4,7 @@ import axiosInstance from '../../lib/instance';
 import { normalizeApiSoldTag, isPujaUserSoldOut, getEventDateTimeRawInIST } from '../../data/pujaList';
 import { useTranslation } from 'react-i18next';
 import { localizeChadhava } from '../../i18n/cmsText';
-import { buildTextTranslations, getDateLocale, localizePujaRecord, localizeRecord } from '../../i18n/content';
+import { buildTextTranslations, getDateLocale, localizePujaRecord, localizeRecord, reportMissingTranslations } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
 import ReviewsFeedback from '../Reviews/ReviewsFeedback';
@@ -172,6 +172,15 @@ function ChadhavaDetail() {
 
   // Localized copy of the record for display; `detail`/`offerings` stay raw (English).
   const view = useMemo(() => localizeChadhava(detail, i18n.language), [detail, i18n.language]);
+  useEffect(() => {
+    reportMissingTranslations(
+      'chadhava',
+      detail,
+      view,
+      ['title', 'shortTitle', 'description', 'templeName', 'templeDescription', 'buttonText', 'category'],
+      i18n.language,
+    );
+  }, [detail, view, i18n.language]);
   useEffect(() => {
     if (detail) setExitIntentContext({ pageType: 'chadhava', chadhavaId: detail._id || detail.id || id, itemTitle: detail.title || detail.name, amount: 0 });
   }, [detail, id]);

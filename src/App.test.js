@@ -9,8 +9,14 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => jest.fn(),
 }), { virtual: true });
 
-import App from './App';
+import App, { LANGUAGE_BY_LANDING_PATH, LANGUAGE_LANDING_PATHS } from './App';
 
 test('exports the application root', () => {
   expect(typeof App).toBe('function');
+});
+
+test('keeps /tu as Telugu public URL and accepts legacy /te links', () => {
+  expect(LANGUAGE_LANDING_PATHS.te).toBe('/tu');
+  expect(LANGUAGE_BY_LANDING_PATH['/tu']).toBe('te');
+  expect(LANGUAGE_BY_LANDING_PATH['/te']).toBe('te');
 });

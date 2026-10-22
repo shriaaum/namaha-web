@@ -12,7 +12,7 @@ import Footer from '../Footer/Footer';
 import { useTranslation } from 'react-i18next';
 import i18nInstance from '../../i18n';
 import { localizeChadhava } from '../../i18n/cmsText';
-import { getDateLocale } from '../../i18n/content';
+import { getDateLocale, reportMissingTranslations } from '../../i18n/content';
 import { cardImageProps } from '../../lib/img';
 
 const INITIAL_VISIBLE_CARDS = 4;
@@ -29,6 +29,13 @@ const getItemsFromResponse = (data) => {
 const normalizeCard = (rawItem = {}) => {
   // Ids/dates come from the raw record; visible text from the localized copy.
   const item = localizeChadhava(rawItem, i18nInstance.language);
+  reportMissingTranslations(
+    'chadhava',
+    rawItem,
+    item,
+    ['title', 'shortTitle', 'description', 'templeName', 'templeDescription', 'buttonText', 'category'],
+    i18nInstance.language,
+  );
   const rawId = rawItem.id || rawItem._id || rawItem.shortTitle || rawItem.slug || rawItem.title;
   const idOrShortTitle = rawItem.id || rawItem._id || rawItem.shortTitle || rawItem.slug;
   const rawDate = item.eventdate || item.eventDate || item.dateText || item.dateRange;

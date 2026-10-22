@@ -12,6 +12,7 @@ import { buildTextTranslations, clearMissingTranslations, getMissingTranslations
 import { localizeChadhava, translateBookedText } from '../cmsText';
 import { clearPujaResponseCache, fetchPujaList, getPujaById } from '../../data/pujaList';
 import Chadhava from '../../components/Chadhava/Chadhava';
+import { getLocalizedReviewText, REVIEWS_AND_FEEDBACK } from '../../data/reviewsAndFeedback';
 
 // react-router-dom v7 is ESM-only for this Jest; the list page only needs navigate() and <Link>.
 jest.mock('react-router-dom', () => ({
@@ -241,5 +242,25 @@ describe('booked items (My Bookings)', () => {
     // A booking made under an older English name is not given the new record's text.
     expect(translateBookedText('Old Puja Name', newPooja, 'name', 'hi')).toBe('Old Puja Name');
     expect(translateBookedText(newPooja.name, newPooja, 'name', 'en')).toBe(newPooja.name);
+  });
+});
+
+describe('predefined reflection translations', () => {
+  test.each(['hi', 'te'])('%s review text is localized while sample identity stays external to the text', (language) => {
+    const review = { id: 'puja-1', review: 'I felt very peaceful while praying for my family.' };
+    const localized = getLocalizedReviewText(review, language);
+    expect(localized).toBeTruthy();
+    expect(localized).not.toBe(review.review);
+  });
+
+  test.each(['hi', 'te'])('%s has localized copy for every predefined reflection', (language) => {
+    const allReflections = [
+      ...REVIEWS_AND_FEEDBACK.puja,
+      ...REVIEWS_AND_FEEDBACK.chadhava,
+    ];
+    allReflections.forEach((review) => {
+      expect(getLocalizedReviewText(review, language)).toBeTruthy();
+      expect(getLocalizedReviewText(review, language)).not.toBe(review.review);
+    });
   });
 });

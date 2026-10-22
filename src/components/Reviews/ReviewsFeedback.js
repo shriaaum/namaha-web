@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getReviews } from "../../data/reviewsAndFeedback";
+import { getLocalizedReviewText, getReviews } from "../../data/reviewsAndFeedback";
 import "./ReviewsFeedback.css";
 
 const getVisibleCount = () => {
@@ -86,7 +86,7 @@ function ReviewAvatar({ name, src }) {
 }
 
 function ReviewsFeedback({ serviceType = "puja", matchText = "", benefits = [], benefitSource = {} }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [visibleCount, setVisibleCount] = useState(getVisibleCount);
   const [page, setPage] = useState(0);
   const [expandedItemId, setExpandedItemId] = useState(null);
@@ -124,7 +124,7 @@ function ReviewsFeedback({ serviceType = "puja", matchText = "", benefits = [], 
   const avatarSources = assignAvatarSources(pageItems.map((item) => (item.type === "benefit" ? benefitReviewer.name : item.name)));
   const renderCard = (item) => {
     const isExpanded = expandedItemId === item.id;
-    return <div className="rf-card"><div className="rf-card-content"><p ref={(element) => { if (element) textRefs.current.set(item.id, element); else textRefs.current.delete(item.id); }} className={isExpanded ? "is-expanded" : ""}>{item.type === "benefit" ? item.text : item.review}</p>{overflowingItemIds.has(item.id) && <button type="button" className="rf-view-toggle" onClick={() => setExpandedItemId(isExpanded ? null : item.id)} aria-expanded={isExpanded}>{isExpanded ? t("reviewsFeedback.viewLess") : t("reviewsFeedback.viewMore")}</button>}</div></div>;
+    return <div className="rf-card"><div className="rf-card-content"><p ref={(element) => { if (element) textRefs.current.set(item.id, element); else textRefs.current.delete(item.id); }} className={isExpanded ? "is-expanded" : ""}>{item.type === "benefit" ? item.text : getLocalizedReviewText(item, i18n.language)}</p>{overflowingItemIds.has(item.id) && <button type="button" className="rf-view-toggle" onClick={() => setExpandedItemId(isExpanded ? null : item.id)} aria-expanded={isExpanded}>{isExpanded ? t("reviewsFeedback.viewLess") : t("reviewsFeedback.viewMore")}</button>}</div></div>;
   };
 
   return <section className="rf-section" aria-labelledby={`rf-title-${serviceType}`}>

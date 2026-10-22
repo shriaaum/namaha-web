@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
 import "./Profile.css";
 
 function Profile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,19 +78,19 @@ function Profile() {
         }
       } catch (err) {
         console.error("Profile fetch error:", err);
-        alert("Failed to load profile");
+        alert(t("profile.loadFailed"));
       } finally {
         setLoading(false);
       }
     };
     fetchUserProfile();
-  }, []);
+  }, [t]);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("Image must be smaller than 5MB");
+        alert(t("profile.imageTooLarge"));
         return;
       }
       setAvatarFile(file);
@@ -151,28 +153,28 @@ function Profile() {
           localStorage.setItem("user", JSON.stringify(updatedUser));
           window.dispatchEvent(new CustomEvent("profile-updated"));
         }
-        alert("Profile updated successfully!");
+        alert(t("profile.updated"));
         navigate(-1);
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Update failed");
+      alert(err.response?.data?.message || t("profile.updateFailed"));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="loading-screen">Loading...</div>;
+  if (loading) return <div className="loading-screen">{t("profile.loading")}</div>;
 
   return (
     <div className="profile-page1">
       <div className="profile-container1">
         {/* Header */}
         <div className="profile-header1">
-          <h1 className="profile-title1">My Profile</h1>
+          <h1 className="profile-title1">{t("profile.title")}</h1>
           <p className="profile-subtitle1">
             {hasChanges()
-              ? "Unsaved changes detected"
-              : "Update your devotee details"}
+              ? t("profile.unsaved")
+              : t("profile.subtitle")}
           </p>
         </div>
 
@@ -183,7 +185,7 @@ function Profile() {
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
-                  alt="Avatar"
+                  alt={t("profile.avatarAlt")}
                   className="profile-avatar-img"
                   style={{
                     objectFit: "cover",
@@ -211,7 +213,7 @@ function Profile() {
             </div>
             <div className="avatar-actions">
               <label className="avatar-btn primary">
-                {avatarPreview ? "Change Photo" : "Add Photo"}
+                {avatarPreview ? t("profile.changePhoto") : t("profile.addPhoto")}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
@@ -228,18 +230,18 @@ function Profile() {
                     setAvatarFile(null);
                   }}
                 >
-                  Remove
+                  {t("profile.remove")}
                 </button>
               )}
             </div>
             {avatarPreview && (
               <div className="avatar-adjust-section">
                 <div className="avatar-adjust-header">
-                  <span className="avatar-adjust-title">Position</span>
+                  <span className="avatar-adjust-title">{t("profile.position")}</span>
                 </div>
                 <div className="avatar-adjust-sliders">
                   <div className="avatar-adjust-row">
-                    <span className="avatar-adjust-axis">Horizontal</span>
+                    <span className="avatar-adjust-axis">{t("profile.horizontal")}</span>
                     <input
                       type="range"
                       min="0"
@@ -256,7 +258,7 @@ function Profile() {
                     />
                   </div>
                   <div className="avatar-adjust-row">
-                    <span className="avatar-adjust-axis">Vertical</span>
+                    <span className="avatar-adjust-axis">{t("profile.vertical")}</span>
                     <input
                       type="range"
                       min="0"
@@ -284,12 +286,12 @@ function Profile() {
                 userMeta.isVerified ? "verified" : "pending"
               }`}
             >
-              {userMeta.isVerified ? "✅ Verified" : "Pending"}
+              {userMeta.isVerified ? `✅ ${t("profile.verified")}` : t("profile.pending")}
             </span>
             <span
               className={`badge ${userMeta.isActive ? "active" : "inactive"}`}
             >
-              {userMeta.isActive ? "Active" : "Inactive"}
+              {userMeta.isActive ? t("profile.active") : t("profile.inactive")}
             </span>
           </div>
         </div>
@@ -297,17 +299,17 @@ function Profile() {
         {/* Editable Form - API Fields Only */}
         <div className="profile-form">
           <div className="form-group full-width">
-            <label>Full Name</label>
+            <label>{t("profile.fullName")}</label>
             <input
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              placeholder="Enter full name"
+              placeholder={t("profile.fullNamePlaceholder")}
             />
           </div>
 
           <div className="form-group full-width">
-            <label>Mobile Number</label>
+            <label>{t("profile.mobile")}</label>
             <input
               name="mobile"
               value={formData.mobile}
@@ -317,7 +319,7 @@ function Profile() {
           </div>
 
           <div className="form-group full-width">
-            <label>Zodiac Sign</label>
+            <label>{t("profile.zodiac")}</label>
               <select
                 name="zodiacSign"
                 value={formData.zodiacSign}
@@ -340,19 +342,19 @@ function Profile() {
 
           {/* ✅ Read-only Account Info */}
           <div className="info-section">
-            <h3>Account Details</h3>
+            <h3>{t("profile.account")}</h3>
             <div className="info-grid">
               <div className="info-item">
-                <span>Role:</span> <strong>{userMeta.role}</strong>
+                <span>{t("profile.role")}</span> <strong>{userMeta.role}</strong>
               </div>
               <div className="info-item">
-                <span>Joined:</span>{" "}
+                <span>{t("profile.joined")}</span>{" "}
                 <strong>
                   {new Date(userMeta.createdAt).toLocaleDateString()}
                 </strong>
               </div>
               <div className="info-item">
-                <span>Last Login:</span>{" "}
+                <span>{t("profile.lastLogin")}</span>{" "}
                 <strong>
                   {new Date(userMeta.lastLoginAt).toLocaleDateString()}
                 </strong>
@@ -366,14 +368,14 @@ function Profile() {
               onClick={() => navigate("/")}
               disabled={saving}
             >
-              Cancel
+              {t("profile.cancel")}
             </button>
             <button
               className={`btn primary ${hasChanges() ? "active" : ""}`}
               onClick={handleSave}
               disabled={!hasChanges() || saving}
             >
-              {saving ? "Saving..." : "Update Profile"}
+              {saving ? t("profile.saving") : t("profile.update")}
             </button>
           </div>
         </div>

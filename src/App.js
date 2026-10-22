@@ -26,15 +26,18 @@ const PrasadamCard   = lazy(() => import('./components/Prasadam/PrasadamCard'));
 const PrasadamPage   = lazy(() => import('./components/Prasadam/PrasadamPage'));
 const ExitIntentPopup = lazy(() => import('./components/ExitIntentPopup/ExitIntentPopup'));
 
-const LANGUAGE_LANDING_PATHS = {
+export const LANGUAGE_LANDING_PATHS = {
   en: '/en',
   hi: '/hi',
-  te: '/te',
+  // `/tu` is the established public Telugu URL. `/te` remains accepted as a
+  // legacy alias so old links do not break.
+  te: '/tu',
 };
 
-const LANGUAGE_BY_LANDING_PATH = Object.fromEntries(
+export const LANGUAGE_BY_LANDING_PATH = Object.fromEntries(
   Object.entries(LANGUAGE_LANDING_PATHS).map(([language, path]) => [path, language])
 );
+LANGUAGE_BY_LANDING_PATH['/te'] = 'te';
 
 // Placeholder for below-the-fold home sections while their chunk loads.
 const SectionSkeleton = () => <div aria-hidden="true" style={{ minHeight: 320 }} />;
@@ -110,6 +113,21 @@ function App() {
             </Suspense>
           </Layout>
         } />
+
+        {/* Localized landing URLs render the same home content; the route is
+            also the source of truth for the selected language. */}
+        {['/en', '/hi', '/tu', '/te'].map((path) => (
+          <Route key={path} path={path} element={
+            <Layout>
+              <Home />
+              <Suspense fallback={<SectionSkeleton />}><SpecialPuja /></Suspense>
+              <Suspense fallback={null}><PrasadamCard source="home" /></Suspense>
+              <Suspense fallback={<SectionSkeleton />}><WhatsAppUpdates /></Suspense>
+              <Suspense fallback={<SectionSkeleton />}><Faqs /></Suspense>
+              <Suspense fallback={<SectionSkeleton />}><Footer /></Suspense>
+            </Layout>
+          } />
+        ))}
 
         <Route path="/about" element={
           <Layout>
