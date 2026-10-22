@@ -17,5 +17,9 @@ describe("Razorpay production-build contract", () => {
     expect(dockerignore).toMatch(/^\.env\.\*$/m);
     expect(workflow).toContain("--build-arg REACT_APP_RAZORPAY_KEY_ID");
     expect(workflow).toContain("secrets.REACT_APP_RAZORPAY_KEY_ID");
+    expect(workflow).toContain("set -euo pipefail");
+    expect(workflow).toContain("docker compose up -d --force-recreate");
+    expect(workflow).toContain("main.69149353.js");
+    expect(workflow).toContain("active bundle lacks Razorpay checkout configuration");
   });
 });

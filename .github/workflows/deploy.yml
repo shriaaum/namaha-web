@@ -28,13 +28,36 @@ jobs:
           -e "ssh -o StrictHostKeyChecking=no" \
           ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/lib/projects/namaha-web
 
+      - name: Validate Razorpay public build key
+        env:
+          REACT_APP_RAZORPAY_KEY_ID: ${{ secrets.REACT_APP_RAZORPAY_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$REACT_APP_RAZORPAY_KEY_ID" =~ ^rzp_(live|test)_[A-Za-z0-9]+$ ]]; then
+            echo "REACT_APP_RAZORPAY_KEY_ID is missing or invalid."
+            exit 1
+          fi
+
       - name: Build & Run Docker on Server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'bash -s' << 'EOF'
+          set -euo pipefail
           cd /var/lib/projects/namaha-web
           sudo docker system prune -af
           sudo docker build \
             --build-arg REACT_APP_RAZORPAY_KEY_ID='${{ secrets.REACT_APP_RAZORPAY_KEY_ID }}' \
             -t namaha-web .
-          sudo docker compose up -d
+          sudo docker compose up -d --force-recreate
+
+          active_html="$(curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:3001/)"
+          active_bundle="$(printf '%s' "$active_html" | grep -oE '/static/js/main\.[A-Za-z0-9]+\.js' | head -n 1)"
+          if [[ -z "$active_bundle" || "$active_bundle" == "/static/js/main.69149353.js" ]]; then
+            echo "Deployment verification failed: stale or missing frontend bundle."
+            exit 1
+          fi
+          if ! sudo docker exec namaha-web sh -c "grep -R -F -q 'REACT_APP_RAZORPAY_KEY_ID' /app/build/static/js"; then
+            echo "Deployment verification failed: active bundle lacks Razorpay checkout configuration."
+            exit 1
+          fi
           EOF
