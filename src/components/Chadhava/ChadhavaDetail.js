@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
-import { normalizeApiSoldTag, isPujaUserSoldOut, getEventDateTimeRawInIST } from '../../data/pujaList';
+import { normalizeApiSoldTag, isPujaUserSoldOut, getEventDateTimeRawInIST, localizePooja } from '../../data/pujaList';
 import { useTranslation } from 'react-i18next';
 import { localizeChadhava } from '../../i18n/cmsText';
-import { buildTextTranslations, getDateLocale, localizePujaRecord, localizeRecord, reportMissingTranslations } from '../../i18n/content';
+import { buildTextTranslations, getDateLocale, reportMissingTranslations } from '../../i18n/content';
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
 import ReviewsFeedback from '../Reviews/ReviewsFeedback';
@@ -359,7 +359,7 @@ function ChadhavaDetail() {
   }, [cart, cartReady, detail, isBookingBlocked, relatedPujaStorageKey]);
 
   const relatedPujaView = useMemo(() => (
-    relatedPuja ? localizeRecord(localizePujaRecord(relatedPuja, i18n.language), i18n.language) : null
+    relatedPuja ? localizePooja(relatedPuja, i18n.language) : null
   ), [relatedPuja, i18n.language]);
   const relatedPujaPrice = relatedPuja ? getPujaPackagePrice(relatedPuja) : null;
   const relatedPujaBanner = useMemo(() => getPujaBannerImage(relatedPuja), [relatedPuja]);

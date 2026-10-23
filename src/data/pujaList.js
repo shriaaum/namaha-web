@@ -14,6 +14,9 @@ const translatePujaFields = (record, language) => {
     templeName: translate(record.templeName),
     templeDescription: translate(record.templeDescription),
     aboutPuja: translate(record.aboutPuja),
+    category: record.category && typeof record.category === 'object'
+      ? { ...record.category, category: translate(record.category.category) }
+      : record.category,
     benefits: Array.isArray(record.benefits)
       ? record.benefits.map((benefit) => ({
           ...benefit,
