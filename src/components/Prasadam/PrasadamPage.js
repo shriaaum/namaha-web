@@ -145,11 +145,11 @@ export default function PrasadamPage() {
 
         <div className="prs-product">
           <div className="prs-card-media prs-card-media--sm">
-            {product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : <span aria-hidden="true">🍬</span>}
+            {product.imageUrl ? <img src={product.imageUrl} alt={product.displayName} /> : <span aria-hidden="true">🍬</span>}
           </div>
           <div>
-            <h2>{product.name}</h2>
-            <p className="prs-muted">{product.description}</p>
+            <h2>{product.displayName}</h2>
+            <p className="prs-muted">{product.displayDescription}</p>
             <strong>₹{product.price}</strong>
             {product.imageUrl === "/prasadam-laddu.jpg" && (
               <small className="prs-credit">Photo: Planetvyom / Wikimedia Commons, CC BY-SA 4.0</small>

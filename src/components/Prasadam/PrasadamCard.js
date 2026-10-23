@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
 import { localizeRecord } from "../../i18n/content";
+import { translateCmsText } from "../../i18n/cmsText";
 import "./Prasadam.css";
 
 let productCache = null;
@@ -25,7 +26,23 @@ export function usePrasadamProduct() {
       cancelled = true;
     };
   }, []);
-  return localizeRecord(product, i18n.language);
+  return withDisplayText(product, i18n.language);
+}
+
+/**
+ * `name`/`description` stay as stored (English): the name is sent to Razorpay.
+ * Screen text uses `displayName`/`displayDescription`: CMS translations first,
+ * then the reviewed dictionary, then English.
+ */
+export function withDisplayText(product, language) {
+  if (!product) return product;
+  const localized = localizeRecord(product, language) || product;
+  const display = (english, translated) => (translated && translated !== english ? translated : translateCmsText(english, language));
+  return {
+    ...product,
+    displayName: display(product.name, localized.name),
+    displayDescription: display(product.description, localized.description),
+  };
 }
 
 /**
@@ -41,11 +58,11 @@ export default function PrasadamCard({ source = "home" }) {
     <section className={`prs-card-section prs-card-section--${source}`}>
       <div className="prs-card">
         <div className="prs-card-media">
-          {product.imageUrl ? <img src={product.imageUrl} alt={product.name} loading="lazy" /> : <span aria-hidden="true">🍬</span>}
+          {product.imageUrl ? <img src={product.imageUrl} alt={product.displayName} loading="lazy" /> : <span aria-hidden="true">🍬</span>}
         </div>
         <div className="prs-card-body">
-          <h3>{product.name}</h3>
-          <p className="prs-card-desc">{product.description}</p>
+          <h3>{product.displayName}</h3>
+          <p className="prs-card-desc">{product.displayDescription}</p>
           <div className="prs-card-foot">
             <span className="prs-card-price">₹{product.price}</span>
             <Link className="prs-card-btn" to={`/prasadam?from=${source}`}>
