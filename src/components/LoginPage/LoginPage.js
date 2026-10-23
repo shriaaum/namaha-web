@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { localizeApiError } from '../../i18n/apiErrors';
 import './LoginPage.css';
+
+// Opens in a new tab so a half-finished OTP login isn't lost.
+const TermsLink = ({ children }) => (
+  <a href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="login-terms-link">
+    {children}
+  </a>
+);
 
 function LoginPage() {
   const { t, i18n } = useTranslation();
@@ -233,7 +240,12 @@ function LoginPage() {
         )}
 
         <div className="login-footer">
-          <p>{t('auth.terms')}</p>
+          <p>
+            <Trans
+              i18nKey="auth.terms"
+              components={{ 1: <TermsLink /> }}
+            />
+          </p>
         </div>
       </div>
     </main>

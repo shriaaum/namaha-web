@@ -37,6 +37,7 @@ function Footer() {
     const serviceLinks = [
         { label: t('footer.puja'), href: '/puja' },
         { label: t('footer.chadhava'), href: '/chadhava' },
+        { label: t('footer.trackOrder'), href: '/track-order' },
     ];
     const socialLinks = [
         { name: 'YouTube', href: 'https://youtube.com/@shri_aaum?si=5kOi-XTTaETP85jK' },
