@@ -92,7 +92,7 @@
     "continue": "Continue",
     "sendOtp": "Send OTP",
     "verifyOtp": "Verify OTP",
-    "terms": "By continuing, you agree to our Terms of Service",
+    "terms": "By continuing, you agree to our <1>Terms of Service</1>",
     "invalidMobile": "Enter valid 10-digit mobile",
     "invalidOtp": "Enter valid 6-digit OTP",
     "otpSentSuccess": "OTP sent successfully!",
@@ -185,6 +185,7 @@
     "line3": "K.V.Rangareddy, Telangana - 500084"
   },
   "footer": {
+    "trackOrder": "Track Order",
     "ariaLabel": "Site footer",
     "brandName": "SHRI AAUM",
     "logoAlt": "Shri AAUM",
@@ -487,6 +488,28 @@
     "delete": "Delete",
     "addNew": "Add a new address",
     "saveLater": "Save this address for next time"
+  },
+  "trackOrder": {
+    "title": "Track Your Order",
+    "subtitle": "Enter the waybill number to see where your order is.",
+    "track": "Track",
+    "checking": "Checking…",
+    "notFound": "We couldn't find a shipment with this waybill number.",
+    "errGeneric": "Something went wrong. Please try again.",
+    "orderedOn": "Ordered on",
+    "expected": "Expected delivery",
+    "deliveredOn": "Delivered on",
+    "notShipped": "Your order is being prepared. Tracking will appear once it is shipped.",
+    "unavailable": "Live courier updates are unavailable right now. Showing the last known status.",
+    "status": {
+      "new": "Order confirmed",
+      "packed": "Packed",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "waybill": "Waybill number",
+    "errWaybill": "Enter a valid waybill number."
   },
   "prasadamShop": {
     "buyNow": "Buy Prasadam",

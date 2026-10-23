@@ -201,3 +201,7 @@
   }
 }
   
+.login-footer .login-terms-link {
+  color: #d45b13;
+  text-decoration: underline;
+}

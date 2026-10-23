@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import i18n from './i18n';
 import Layout from './components/Layout/Layout';
@@ -24,6 +24,7 @@ const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB')
 const PolicyPage     = lazy(() => import('./components/PolicyPage/PolicyPage'));
 const PrasadamCard   = lazy(() => import('./components/Prasadam/PrasadamCard'));
 const PrasadamPage   = lazy(() => import('./components/Prasadam/PrasadamPage'));
+const TrackOrder     = lazy(() => import('./components/Prasadam/TrackOrder'));
 const ExitIntentPopup = lazy(() => import('./components/ExitIntentPopup/ExitIntentPopup'));
 
 export const LANGUAGE_LANDING_PATHS = {
@@ -147,6 +148,10 @@ function App() {
 
         <Route path="/privacy-policy" element={<Layout><Suspense fallback={<PageLoader />}><PolicyPage policy="privacy" /></Suspense></Layout>} />
         <Route path="/cancellation-refund-policy" element={<Layout><Suspense fallback={<PageLoader />}><PolicyPage policy="refund" /></Suspense></Layout>} />
+        <Route path="/refund-policy" element={<Navigate to="/cancellation-refund-policy" replace />} />
+        <Route path="/refund" element={<Navigate to="/cancellation-refund-policy" replace />} />
+        <Route path="/terms" element={<Navigate to="/terms-of-service" replace />} />
+        <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
         <Route path="/terms-of-service" element={<Layout><Suspense fallback={<PageLoader />}><PolicyPage policy="terms" /></Suspense></Layout>} />
 
         <Route path="/Profile" element={
@@ -169,6 +174,14 @@ function App() {
           <Layout>
             <Suspense fallback={<PageLoader />}>
               <PrasadamPage />
+            </Suspense>
+          </Layout>
+        } />
+
+        <Route path="/track-order" element={
+          <Layout>
+            <Suspense fallback={<PageLoader />}>
+              <TrackOrder />
             </Suspense>
           </Layout>
         } />

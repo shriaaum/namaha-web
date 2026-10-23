@@ -27,3 +27,11 @@
 .prs-pay:disabled{opacity:.6}
 .prs-done{text-align:center}
 .prs-credit{display:block;margin-top:4px;font-size:10px;color:#9a8878}
+
+.trk-result{margin-top:20px;border-top:1px solid #f1d9c0;padding-top:4px}
+.trk-status{display:inline-block;margin:0 0 8px;padding:4px 12px;border-radius:999px;background:#ffe9d2;color:#a84611;font-weight:700;font-size:14px}
+.trk-timeline{list-style:none;margin:14px 0 0;padding:0 0 0 16px;border-left:2px solid #f1d9c0}
+.trk-timeline li{position:relative;display:flex;flex-direction:column;gap:2px;padding-bottom:14px;font-size:14px}
+.trk-timeline li::before{content:"";position:absolute;left:-23px;top:5px;width:10px;height:10px;border-radius:50%;background:#d45b13}
+.trk-timeline li span{color:#7a6657}
+.trk-timeline li small{color:#9a8878}
