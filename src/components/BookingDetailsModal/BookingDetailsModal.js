@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
 import { translateBookedText, translateCmsText } from "../../i18n/cmsText";
 import { getDateLocale } from "../../i18n/content";
+import { localizeApiError } from "../../i18n/apiErrors";
+import { localizePackageName } from "../../i18n/packageNames";
 import "./BookingDetailsModal.css";
 
 const STATUS_KEYS = {
@@ -50,11 +52,11 @@ function BookingDetailsModal({ bookingId, onClose }) {
       );
     } catch (err) {
       console.error("Error fetching booking details:", err);
-      setError(err.response?.data?.message || t("myBookings.detailsLoadFailed"));
+      setError(localizeApiError(err, t("myBookings.detailsLoadFailed"), t, i18n.language));
     } finally {
       setLoading(false);
     }
-  }, [bookingId, t]);
+  }, [bookingId, t, i18n.language]);
 
   useEffect(() => {
     if (bookingId) {
@@ -194,7 +196,12 @@ function BookingDetailsModal({ bookingId, onClose }) {
               <div className="info-card">
                 <h3>📦 {t("myBookings.packageTitle")}</h3>
                 <p className="info-value">
-                  {translateCmsText(booking.bookingSnapshot?.selectedPackage?.name, i18n.language) || "-"}
+                  {localizePackageName(
+                    booking.bookingSnapshot?.selectedPackage?.name,
+                    t,
+                    i18n.language,
+                    (name) => translateCmsText(name, i18n.language)
+                  ) || "-"}
                 </p>
                 <p className="info-label">
                   {t("myBookings.priceLabel", {

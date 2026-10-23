@@ -6,6 +6,8 @@ import { loadScript } from "../../lib/loadScript";
 import { getRazorpayPublicKey } from "../../lib/razorpayConfig";
 import { localizePujaRecord } from "../../i18n/content";
 import { translateCmsText } from "../../i18n/cmsText";
+import { localizeApiError, localizeApiMessage } from "../../i18n/apiErrors";
+import { localizePackageName } from "../../i18n/packageNames";
 import Footer from "../Footer/Footer";
 import { setExitIntentContext, markBookingCompleted } from "../../lib/exitIntentContext";
 import "./BillingPage.css";
@@ -233,7 +235,7 @@ function BillingPage() {
       ? translateText(addon?.name)
       : addonDisplayNames.get(String(addon?.id || `addon-${index}`)) || addon?.name;
   const getPackageDisplayName = (pkg) =>
-    PACKAGE_LABEL_KEYS[pkg?.name] ? t(PACKAGE_LABEL_KEYS[pkg.name]) : translateText(pkg?.name);
+    PACKAGE_LABEL_KEYS[pkg?.name] ? t(PACKAGE_LABEL_KEYS[pkg.name]) : localizePackageName(pkg?.name, t, i18n.language, translateText);
 
   const resolvedSelectedPackage = useMemo(
     () =>
@@ -815,7 +817,7 @@ function BillingPage() {
           razorpayKey
         );
       } else {
-        showToast(res.data.message || t("billing.errCreateOrder"));
+        showToast(localizeApiMessage(res.data.message, t("billing.errCreateOrder"), t, i18n.language));
       }
     } catch (err) {
       const status = err.response?.status;
@@ -828,7 +830,7 @@ function BillingPage() {
       });
 
       if (status === 401) {
-        alert(err.response?.data?.message || t("billing.paymentFailed"));
+        alert(localizeApiError(err, t("billing.paymentFailed"), t, i18n.language));
         return;
       }
 
@@ -838,7 +840,7 @@ function BillingPage() {
         return;
       }
 
-      showToast(err.response?.data?.message || t("billing.paymentFailed"));
+      showToast(localizeApiError(err, t("billing.paymentFailed"), t, i18n.language));
     } finally {
       setLoading(false);
     }
@@ -1251,31 +1253,31 @@ function BillingPage() {
 
     // Payment Summary rows: Puja package + addons
     const packagePriceVal = String(packagePrice || 0).replace(/[₹,\s]/g, "") || "0";
-    const pkgRow = `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${pujaName} (${packageName || "-"})</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${packagePriceVal}</td></tr>`;
+    const pkgRow = `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${displayPujaTitle || translateText(pujaName)} (${localizePackageName(packageName, t, i18n.language, translateText) || "-"})</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${packagePriceVal}</td></tr>`;
 
     const addonsRows =
       addons && addons.length
         ? addons
             .map(
               (a) =>
-                `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${a.name || "-"}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">${a.quantity || 1}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${a.total || a.price || 0}</td></tr>`
+                `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${translateText(a.name) || "-"}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">${a.quantity || 1}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${a.total || a.price || 0}</td></tr>`
             )
             .join("")
         : "";
 
     const prasadamRow =
       prasadam && (prasadamAmount || 0) > 0
-        ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Prasadam</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${prasadamAmount}</td></tr>`
+        ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${t("invoice.prasadam")}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${prasadamAmount}</td></tr>`
         : "";
 
     const dakshinaRow =
       Number(dakshinaAmount) > 0
-        ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Dakshina for Pujari</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${dakshinaAmount}</td></tr>`
+        ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${t("invoice.dakshina")}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${dakshinaAmount}</td></tr>`
         : "";
 
     const couponRow =
       coupon && couponCode && (discountAmount || 0) > 0
-        ? `<tr><td colspan="2" style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">Discount (${couponCode})</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">-₹${discountAmount || 0}</td></tr>`
+        ? `<tr><td colspan="2" style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${t("invoice.discount", { code: couponCode })}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">-₹${discountAmount || 0}</td></tr>`
         : "";
 
     const win = window.open("", "_blank");
@@ -1283,9 +1285,9 @@ function BillingPage() {
 
     win.document.write(`
       <!DOCTYPE html>
-      <html>
+      <html lang="${i18n.language}">
         <head>
-          <title>Invoice - ${invoiceNo || orderId || "Puja Booking"}</title>
+          <title>${t("invoice.title")} - ${invoiceNo || orderId || t("invoice.pujaBooking")}</title>
           <meta charset="UTF-8" />
           <style>
             * { box-sizing: border-box; }
@@ -1316,42 +1318,42 @@ function BillingPage() {
           <div class="invoice">
             <div class="header">
               <h1 class="brand">SHRI AAUM</h1>
-              <p class="tagline">Sacred Ritual Booking Platform</p>
-              <p class="contact">Website: www.shriaaum.com | Email: bhakta@shriaaum.com</p>
+              <p class="tagline">${t("invoice.tagline")}</p>
+              <p class="contact">${t("invoice.website")}: www.shriaaum.com | ${t("invoice.email")}: bhakta@shriaaum.com</p>
             </div>
 
-            <h2 class="invoice-title">INVOICE</h2>
+            <h2 class="invoice-title">${t("invoice.heading")}</h2>
 
             <div class="meta-row">
-              <span><strong>Invoice No:</strong> ${invoiceNo || orderId || "-"}</span>
-              <span><strong>Invoice Date:</strong> ${invoiceDate || new Date().toLocaleDateString("en-IN")}</span>
-              <span><strong>Payment Status:</strong> Paid</span>
+              <span><strong>${t("invoice.number")}:</strong> ${invoiceNo || orderId || "-"}</span>
+              <span><strong>${t("invoice.date")}:</strong> ${invoiceDate || new Date().toLocaleDateString("en-IN")}</span>
+              <span><strong>${t("invoice.paymentStatus")}:</strong> ${t("invoice.paid")}</span>
             </div>
 
             <div class="section">
-              <div class="section-title">Devotee Details</div>
+              <div class="section-title">${t("invoice.devoteeDetails")}</div>
               <div class="section-content">
-                <p><strong>Name:</strong> ${devoteeDetails?.name || "-"}</p>
-                <p><strong>Phone:</strong> ${devoteeDetails?.phone || "-"}</p>
-                <p><strong>Email:</strong> ${devoteeDetails?.email || "N/A"}</p>
+                <p><strong>${t("invoice.name")}:</strong> ${devoteeDetails?.name || "-"}</p>
+                <p><strong>${t("invoice.phone")}:</strong> ${devoteeDetails?.phone || "-"}</p>
+                <p><strong>${t("invoice.email")}:</strong> ${devoteeDetails?.email || t("invoice.notAvailable")}</p>
               </div>
             </div>
 
             <div class="section">
-              <div class="section-title">Booking Details</div>
+              <div class="section-title">${t("invoice.bookingDetails")}</div>
               <div class="section-content">
-                <p><strong>Booking ID:</strong> ${orderId || "-"}</p>
-                <p><strong>Service:</strong> Temple Ritual / Pooja</p>
-                <p><strong>Temple Date:</strong> ${pujaDate || "-"}</p>
-                <p><strong>Booking Mode:</strong> Online</p>
+                <p><strong>${t("invoice.bookingId")}:</strong> ${orderId || "-"}</p>
+                <p><strong>${t("invoice.service")}:</strong> ${t("invoice.serviceValue")}</p>
+                <p><strong>${t("invoice.templeDate")}:</strong> ${pujaDate || "-"}</p>
+                <p><strong>${t("invoice.bookingMode")}:</strong> ${t("invoice.online")}</p>
               </div>
             </div>
 
             <div class="section">
-              <div class="section-title">Payment Summary</div>
+              <div class="section-title">${t("invoice.paymentSummary")}</div>
               <table>
                 <thead>
-                  <tr><th>Description</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th></tr>
+                  <tr><th>${t("invoice.description")}</th><th style="text-align:center;">${t("invoice.qty")}</th><th style="text-align:right;">${t("invoice.price")}</th></tr>
                 </thead>
                 <tbody>
                   ${pkgRow}
@@ -1361,16 +1363,16 @@ function BillingPage() {
                   ${couponRow}
                 </tbody>
               </table>
-              <p style="margin-top:12px; text-align:right; font-weight:700; font-size:14px;">Total Paid: ₹${grandTotal}</p>
+              <p style="margin-top:12px; text-align:right; font-weight:700; font-size:14px;">${t("invoice.totalPaid")}: ₹${grandTotal}</p>
             </div>
 
             <div class="notes">
-              <strong>Notes:</strong><br/>
-              This invoice confirms your booking for the selected ritual service. Prasadam dispatch and ritual updates will be shared via WhatsApp or email.
+              <strong>${t("invoice.notes")}:</strong><br/>
+              ${t("invoice.notesText")}
             </div>
 
             <div class="footer">
-              Thank you for booking with Shri AAUM. May divine blessings be with you.
+              ${t("invoice.thankYou")}
             </div>
           </div>
         </body>
@@ -1651,7 +1653,7 @@ function BillingPage() {
                   </div>
                   {couponError && (
                     <p className="billing-coupon-error">
-                      {couponError.key ? t(couponError.key) : couponError.text}
+                      {couponError.key ? t(couponError.key) : localizeApiMessage(couponError.text, t("billing.couponInvalid"), t, i18n.language)}
                     </p>
                   )}
                 </>

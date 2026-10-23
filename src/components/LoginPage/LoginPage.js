@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
 import { useTranslation } from 'react-i18next';
+import { localizeApiError } from '../../i18n/apiErrors';
 import './LoginPage.css';
 
 function LoginPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -37,7 +38,7 @@ function LoginPage() {
         setError(t('auth.otpSentSuccess'));
       }
     } catch (err) {
-      setError(err.response?.data?.message || t('auth.sendOtpFailed'));
+      setError(localizeApiError(err, t('auth.sendOtpFailed'), t, i18n.language));
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ function LoginPage() {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || t('auth.invalidOtpMessage'));
+      setError(localizeApiError(err, t('auth.invalidOtpMessage'), t, i18n.language));
     } finally {
       setLoading(false);
     }
@@ -115,7 +116,7 @@ function LoginPage() {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || t('auth.profileUpdateFailed'));
+      setError(localizeApiError(err, t('auth.profileUpdateFailed'), t, i18n.language));
       console.error('❌ Error:', err.response?.data);
     } finally {
       setLoading(false);

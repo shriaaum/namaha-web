@@ -4,6 +4,7 @@
  */
 import { translateCmsText, localizeChadhava } from '../cmsText';
 import { localizePujaRecord, localizeRecord, localizeHeroBanner, getDateLocale } from '../content';
+import { localizePooja } from '../../data/pujaList';
 
 const cmsHi = require('../cms/hi.json');
 const cmsTe = require('../cms/te.json');
@@ -130,6 +131,57 @@ describe('localizePujaRecord / localizeRecord', () => {
     expect(localizeRecord(category, 'te').category).toBe('పవిత్ర ఆలయం వేడుక');
     expect(localizeRecord(category, 'te')._id).toBe('local-admin-category');
     expect(localizeRecord(category, 'te').section).toBe('occasion');
+  });
+});
+
+describe('localizePooja', () => {
+  const source = {
+    _id: 'puja-cms-fallback',
+    name: SOURCE,
+    description: SOURCE,
+    templeName: SOURCE,
+    templeDescription: SOURCE,
+    aboutPuja: SOURCE,
+    benefits: [{ _id: 'b1', title: SOURCE, subtitle: SOURCE }],
+    addOns: [{ _id: 'a1', name: SOURCE, price: 301 }],
+    packageDetails: [{ _id: 'p1', name: SOURCE, price: 801 }],
+  };
+
+  test.each(['hi', 'te'])('uses reviewed CMS fallbacks for every puja display field in %s', (language) => {
+    const expected = (language === 'hi' ? cmsHi : cmsTe)[SOURCE];
+    const out = localizePooja(source, language);
+    expect(out.name).toBe(expected);
+    expect(out.description).toBe(expected);
+    expect(out.templeName).toBe(expected);
+    expect(out.templeDescription).toBe(expected);
+    expect(out.aboutPuja).toBe(expected);
+    expect(out.benefits[0]).toMatchObject({ title: expected, subtitle: expected });
+    expect(out.addOns[0].name).toBe(expected);
+    expect(out.packageDetails[0].name).toBe(expected);
+    expect(out.nameEn).toBe(SOURCE);
+    expect(out.addOns[0].nameEn).toBe(SOURCE);
+    expect(out.packageDetails[0].nameEn).toBe(SOURCE);
+    expect(out.addOns[0].price).toBe(301);
+    expect(out.packageDetails[0].price).toBe(801);
+  });
+
+  test('API record translations override reviewed CMS fallbacks', () => {
+    const out = localizePooja({
+      ...source,
+      translations: {
+        hi: {
+          name: 'CMS शीर्षक',
+          benefits: { b1: { title: 'CMS लाभ', subtitle: 'CMS उपशीर्षक' } },
+          addOns: { a1: { name: 'CMS ऐड-ऑन' } },
+          packageDetails: { p1: { name: 'CMS पैकेज' } },
+        },
+      },
+    }, 'hi');
+    expect(out.name).toBe('CMS शीर्षक');
+    expect(out.benefits[0]).toMatchObject({ title: 'CMS लाभ', subtitle: 'CMS उपशीर्षक' });
+    expect(out.addOns[0].name).toBe('CMS ऐड-ऑन');
+    expect(out.packageDetails[0].name).toBe('CMS पैकेज');
+    expect(out.nameEn).toBe(SOURCE);
   });
 });
 

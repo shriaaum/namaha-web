@@ -40,16 +40,18 @@ const getBenefitReviewer = (source) => {
   return name && location && rating > 0 ? { name, location, rating } : FALLBACK_REVIEWER;
 };
 
-const makeBenefitReview = (benefits, serviceType) => {
+const makeBenefitReview = (benefits, serviceType, t) => {
   const points = benefits.map((benefit) => asSentence(benefit.subtitle || benefit.title));
-  const service = serviceType === "chadhava" ? "Chadhava" : "Puja";
   return [
-    `I booked this ${service} and had a wonderful experience.`,
-    `I found "${points[0]}" especially meaningful.`,
-    ...(points[1] ? [`I also appreciated "${points[1]}".`] : []),
-    "The spiritual significance of these prayers made me feel peaceful.",
+    serviceType === "chadhava" ? t("reviewsFeedback.benefitOpeningChadhava") : t("reviewsFeedback.benefitOpeningPuja"),
+    t("reviewsFeedback.benefitFirstPoint", { point: points[0] }),
+    ...(points[1] ? [t("reviewsFeedback.benefitSecondPoint", { point: points[1] })] : []),
+    t("reviewsFeedback.benefitClosing"),
   ].join(" ");
 };
+
+// City names are stored in English; shown via cities.<Name>, unknown cities as entered.
+const cityLabel = (city, t) => (city ? t(`cities.${String(city).replace(/[^A-Za-z0-9_]/g, "")}`, { defaultValue: city }) : city);
 
 const FEMALE_REVIEWERS = new Set([
   "Ananya Sharma", "Kavya Reddy", "Meena Patel", "Meenakshi Rao", "Meera Iyer", "Neha Singh",
@@ -96,8 +98,8 @@ function ReviewsFeedback({ serviceType = "puja", matchText = "", benefits = [], 
   const reviews = useMemo(() => getReviews(serviceType, matchText), [serviceType, matchText]);
   const benefitHighlight = useMemo(() => {
     const selectedBenefits = normalizeBenefits(benefits).slice(0, 2);
-    return selectedBenefits.length ? { id: "benefit-highlight", type: "benefit", text: makeBenefitReview(selectedBenefits, serviceType) } : null;
-  }, [benefits, serviceType]);
+    return selectedBenefits.length ? { id: "benefit-highlight", type: "benefit", text: makeBenefitReview(selectedBenefits, serviceType, t) } : null;
+  }, [benefits, serviceType, t]);
   const items = useMemo(() => [...(benefitHighlight ? [benefitHighlight] : []), ...reviews.map((review) => ({ ...review, type: "review" }))], [benefitHighlight, reviews]);
   const pages = useMemo(() => Array.from({ length: Math.ceil(items.length / visibleCount) }, (_, index) => items.slice(index * visibleCount, index * visibleCount + visibleCount)), [items, visibleCount]);
 
@@ -130,7 +132,7 @@ function ReviewsFeedback({ serviceType = "puja", matchText = "", benefits = [], 
   return <section className="rf-section" aria-labelledby={`rf-title-${serviceType}`}>
     <h2 id={`rf-title-${serviceType}`} className="rf-title">{t("reviewsFeedback.title")}</h2><p className="rf-intro">{intro}</p>
     <div className="rf-grid" style={{ gridTemplateColumns: `repeat(${visibleCount}, minmax(0, 1fr))` }}>
-      {pageItems.map((item, position) => item.type === "benefit" ? <article key={item.id} className="rf-item rf-benefit" data-testid="benefit-highlight">{renderCard(item)}<div className="rf-author"><ReviewAvatar name={benefitReviewer.name} src={avatarSources[position]} /><span className="rf-author-text"><span className="rf-name">{benefitReviewer.name}</span><span className="rf-meta"><span className="rf-city">{benefitReviewer.location}</span><span className="rf-stars" role="img" aria-label={t("reviewsFeedback.ratingLabel", { rating: benefitReviewer.rating })}>{"★".repeat(benefitReviewer.rating)}</span></span></span></div></article> : <figure key={item.id} className="rf-item"><blockquote>{renderCard(item)}</blockquote><figcaption className="rf-author"><ReviewAvatar name={item.name} src={avatarSources[position]} /><span className="rf-author-text"><span className="rf-name">{item.name}</span><span className="rf-meta"><span className="rf-city">{item.city}</span>{item.rating ? <span className="rf-stars" role="img" aria-label={t("reviewsFeedback.ratingLabel", { rating: item.rating })}>{"★".repeat(item.rating)}</span> : null}</span></span></figcaption></figure>)}
+      {pageItems.map((item, position) => item.type === "benefit" ? <article key={item.id} className="rf-item rf-benefit" data-testid="benefit-highlight">{renderCard(item)}<div className="rf-author"><ReviewAvatar name={benefitReviewer.name} src={avatarSources[position]} /><span className="rf-author-text"><span className="rf-name">{benefitReviewer.name}</span><span className="rf-meta"><span className="rf-city">{cityLabel(benefitReviewer.location, t)}</span><span className="rf-stars" role="img" aria-label={t("reviewsFeedback.ratingLabel", { rating: benefitReviewer.rating })}>{"★".repeat(benefitReviewer.rating)}</span></span></span></div></article> : <figure key={item.id} className="rf-item"><blockquote>{renderCard(item)}</blockquote><figcaption className="rf-author"><ReviewAvatar name={item.name} src={avatarSources[position]} /><span className="rf-author-text"><span className="rf-name">{item.name}</span><span className="rf-meta"><span className="rf-city">{cityLabel(item.city, t)}</span>{item.rating ? <span className="rf-stars" role="img" aria-label={t("reviewsFeedback.ratingLabel", { rating: item.rating })}>{"★".repeat(item.rating)}</span> : null}</span></span></figcaption></figure>)}
     </div>
     {pages.length > 1 && <div className="rf-controls" aria-label={t("reviewsFeedback.paginationLabel")}><button type="button" className="rf-arrow" onClick={() => setPage((current) => Math.max(0, current - 1))} disabled={page === 0} aria-label={t("reviewsFeedback.previous")}>‹</button><div className="rf-dots">{pages.map((_, index) => <button key={index} type="button" className={index === page ? "is-active" : ""} onClick={() => setPage(index)} aria-label={t("reviewsFeedback.goToPage", { page: index + 1 })} aria-current={index === page ? "true" : undefined} />)}</div><button type="button" className="rf-arrow" onClick={() => setPage((current) => Math.min(pages.length - 1, current + 1))} disabled={page === pages.length - 1} aria-label={t("reviewsFeedback.next")}>›</button></div>}
   </section>;

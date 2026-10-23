@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import i18nInstance from '../../i18n';
 import { localizeChadhava } from '../../i18n/cmsText';
 import { getDateLocale, reportMissingTranslations } from '../../i18n/content';
+import { localizeApiMessage } from '../../i18n/apiErrors';
 import { cardImageProps } from '../../lib/img';
 
 const INITIAL_VISIBLE_CARDS = 4;
@@ -197,7 +198,7 @@ function Chadhava() {
             <p className="ch-loading-text">{t('chadhava.loading')}</p>
           </div>
         ) : error ? (
-          <p className="ch-offerings-subtitle">{errorMessage || t('chadhava.loadError')}</p>
+          <p className="ch-offerings-subtitle">{localizeApiMessage(errorMessage, t('chadhava.loadError'), t, i18n.language)}</p>
         ) : cards.length === 0 ? (
           <p className="ch-offerings-subtitle">{t('chadhava.empty')}</p>
         ) : (

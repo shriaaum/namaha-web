@@ -2,9 +2,56 @@ import axiosInstance from "../lib/instance";
 import { useState, useEffect } from "react";
 import i18n from '../i18n';
 import { localizeRecord, localizePujaRecord, getDateLocale, reportMissingTranslations, buildTextTranslations } from '../i18n/content';
-import { localizeChadhava } from '../i18n/cmsText';
+import { localizeChadhava, translateCmsText } from '../i18n/cmsText';
 
-const localizePooja = (record, language) => localizeRecord(localizePujaRecord(record, language), language);
+const translatePujaFields = (record, language) => {
+  if (!record || typeof record !== 'object') return record;
+  const translate = (value) => translateCmsText(value, language);
+  return {
+    ...record,
+    name: translate(record.name),
+    description: translate(record.description),
+    templeName: translate(record.templeName),
+    templeDescription: translate(record.templeDescription),
+    aboutPuja: translate(record.aboutPuja),
+    benefits: Array.isArray(record.benefits)
+      ? record.benefits.map((benefit) => ({
+          ...benefit,
+          title: translate(benefit?.title),
+          subtitle: translate(benefit?.subtitle),
+        }))
+      : record.benefits,
+    addOns: Array.isArray(record.addOns)
+      ? record.addOns.map((addOn) => ({ ...addOn, name: translate(addOn?.name) }))
+      : record.addOns,
+    packageDetails: Array.isArray(record.packageDetails)
+      ? record.packageDetails.map((pkg) => ({ ...pkg, name: translate(pkg?.name) }))
+      : record.packageDetails,
+  };
+};
+
+/**
+ * Display-only localization for Pooja CMS records. `*En` retains the exact
+ * English source used by booking payloads; API-provided record translations
+ * are applied last and therefore override local reviewed fallbacks.
+ */
+export const localizePooja = (record, language) => {
+  if (!record || typeof record !== 'object') return record;
+  const withEnglish = {
+    ...record,
+    nameEn: record.name,
+    addOns: Array.isArray(record.addOns)
+      ? record.addOns.map((addOn) => ({ ...addOn, nameEn: addOn?.name }))
+      : record.addOns,
+    packageDetails: Array.isArray(record.packageDetails)
+      ? record.packageDetails.map((pkg) => ({ ...pkg, nameEn: pkg?.name }))
+      : record.packageDetails,
+  };
+  return localizeRecord(
+    translatePujaFields(localizePujaRecord(withEnglish, language), language),
+    language
+  );
+};
 
 /** Grid column count for Puja list + Special Puja cards (see PujaList.css `.pl-cards`, SpecialPuja.css `.sp-cards`). */
 export const PUJA_LIST_GRID_COLUMNS = 4;

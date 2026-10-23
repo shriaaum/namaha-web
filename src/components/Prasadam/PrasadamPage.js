@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { localizeApiError } from "../../i18n/apiErrors";
 import { loadScript } from "../../lib/loadScript";
 import { getRazorpayPublicKey } from "../../lib/razorpayConfig";
 import SavedAddresses from "../BillingPage/SavedAddresses";
@@ -31,7 +32,7 @@ const initialForm = () => {
 
 /** Standalone Prasadam purchase: quantity + delivery address + Razorpay. */
 export default function PrasadamPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [params] = useSearchParams();
   const product = usePrasadamProduct();
   const [qty, setQty] = useState(1);
@@ -132,7 +133,7 @@ export default function PrasadamPage() {
         },
       }).open();
     } catch (err) {
-      setError(err.response?.data?.message || t("prasadamShop.errGeneric"));
+      setError(localizeApiError(err, t("prasadamShop.errGeneric"), t, i18n.language));
       setLoading(false);
     }
   };

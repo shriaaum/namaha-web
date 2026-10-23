@@ -9,6 +9,7 @@ import PrasadamCard from "../Prasadam/PrasadamCard";
 import Footer from "../Footer/Footer";
 import ReviewsFeedback from "../Reviews/ReviewsFeedback";
 import { setExitIntentContext } from "../../lib/exitIntentContext";
+import { localizePackageName } from "../../i18n/packageNames";
 
 const renderRichText = (text) => {
   if (!text || typeof text !== "string") return null;
@@ -172,7 +173,7 @@ function PujaDetail() {
   const packageLabel = (pkg) => (
     pkg?.isFallbackPackage && PACKAGE_LABEL_KEYS[pkg?.name]
       ? t(PACKAGE_LABEL_KEYS[pkg.name])
-      : pkg?.name
+      : localizePackageName(pkg?.name, t, i18n.language)
   );
 
   const [loading, setLoading] = useState(true);

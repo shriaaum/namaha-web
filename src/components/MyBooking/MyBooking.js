@@ -3,6 +3,9 @@ import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
 import { translateBookedText, translateCmsText } from "../../i18n/cmsText";
 import { getDateLocale } from "../../i18n/content";
+import { localizeApiError } from "../../i18n/apiErrors";
+import { localizePackageName } from "../../i18n/packageNames";
+import i18nInstance from "../../i18n";
 import BookingDetailsModal from "../BookingDetailsModal/BookingDetailsModal";
 import "./MyBooking.css";
 
@@ -32,7 +35,7 @@ function MyBookings() {
       setBookings(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Error fetching bookings:", err);
-      setError(err.response?.data?.message || tRef.current("myBookings.loadFailed"));
+      setError(localizeApiError(err, tRef.current("myBookings.loadFailed"), tRef.current, i18nInstance.language));
     } finally {
       setLoading(false);
     }
@@ -110,7 +113,9 @@ function MyBookings() {
         : pujaObj?.name
           ? translateBookedText(pujaObj.name, pujaObj, "name", i18n.language)
           : t("myBookings.fallbackTitle"),
-      packageName: translateCmsText(selectedPkg?.name ?? categoryName, i18n.language) ?? t("myBookings.notAvailable"),
+      packageName: (selectedPkg?.name
+        ? localizePackageName(selectedPkg.name, t, i18n.language, (name) => translateCmsText(name, i18n.language))
+        : translateCmsText(categoryName, i18n.language)) ?? t("myBookings.notAvailable"),
       date: b.date,
       slotStart: b.slots?.[0]?.start,
       duration: b.duration ?? selectedPkg?.duration ?? "—",

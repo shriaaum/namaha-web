@@ -2,10 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { getDateLocale } from "../../i18n/content";
+import { localizeApiError } from "../../i18n/apiErrors";
 import "./Profile.css";
 
+// Stored values stay English; the label is translated (profile.zodiacSigns.<value>).
+const ZODIAC_SIGNS = [
+  ["aries", "♈"], ["taurus", "♉"], ["gemini", "♊"], ["cancer", "♋"],
+  ["leo", "♌"], ["virgo", "♍"], ["libra", "♎"], ["scorpio", "♏"],
+  ["sagittarius", "♐"], ["capricorn", "♑"], ["aquarius", "♒"], ["pisces", "♓"],
+];
+
 function Profile() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -157,7 +166,7 @@ function Profile() {
         navigate(-1);
       }
     } catch (err) {
-      alert(err.response?.data?.message || t("profile.updateFailed"));
+      alert(localizeApiError(err, t("profile.updateFailed"), t, i18n.language));
     } finally {
       setSaving(false);
     }
@@ -254,7 +263,7 @@ function Profile() {
                         localStorage.setItem("profile_avatar_position", JSON.stringify(next));
                       }}
                       className="avatar-adjust-slider"
-                      aria-label="Horizontal position"
+                      aria-label={t("profile.horizontalPosition")}
                     />
                   </div>
                   <div className="avatar-adjust-row">
@@ -271,7 +280,7 @@ function Profile() {
                         localStorage.setItem("profile_avatar_position", JSON.stringify(next));
                       }}
                       className="avatar-adjust-slider"
-                      aria-label="Vertical position"
+                      aria-label={t("profile.verticalPosition")}
                     />
                   </div>
                 </div>
@@ -325,18 +334,9 @@ function Profile() {
                 value={formData.zodiacSign}
                 onChange={handleInputChange}
               >
-                <option value="aries">Aries ♈</option>
-                <option value="taurus">Taurus ♉</option>
-                <option value="gemini">Gemini ♊</option>
-                <option value="cancer">Cancer ♋</option>
-                <option value="leo">Leo ♌</option>
-                <option value="virgo">Virgo ♍</option>
-                <option value="libra">Libra ♎</option>
-                <option value="scorpio">Scorpio ♏</option>
-                <option value="sagittarius">Sagittarius ♐</option>
-                <option value="capricorn">Capricorn ♑</option>
-                <option value="aquarius">Aquarius ♒</option>
-                <option value="pisces">Pisces ♓</option>
+                {ZODIAC_SIGNS.map(([value, symbol]) => (
+                  <option key={value} value={value}>{t(`profile.zodiacSigns.${value}`)} {symbol}</option>
+                ))}
               </select>
           </div>
 
@@ -345,18 +345,18 @@ function Profile() {
             <h3>{t("profile.account")}</h3>
             <div className="info-grid">
               <div className="info-item">
-                <span>{t("profile.role")}</span> <strong>{userMeta.role}</strong>
+                <span>{t("profile.role")}</span> <strong>{t(`profile.roles.${userMeta.role}`, { defaultValue: userMeta.role })}</strong>
               </div>
               <div className="info-item">
                 <span>{t("profile.joined")}</span>{" "}
                 <strong>
-                  {new Date(userMeta.createdAt).toLocaleDateString()}
+                  {new Date(userMeta.createdAt).toLocaleDateString(getDateLocale(i18n.language))}
                 </strong>
               </div>
               <div className="info-item">
                 <span>{t("profile.lastLogin")}</span>{" "}
                 <strong>
-                  {new Date(userMeta.lastLoginAt).toLocaleDateString()}
+                  {new Date(userMeta.lastLoginAt).toLocaleDateString(getDateLocale(i18n.language))}
                 </strong>
               </div>
             </div>

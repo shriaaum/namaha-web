@@ -70,6 +70,17 @@ describe("ReviewsFeedback", () => {
     expect(container.querySelectorAll(".rf-item")[0]).toHaveTextContent(reviews[0].name);
   });
 
+  test("writes the benefit card and cities in the selected language", async () => {
+    await act(async () => { await i18n.changeLanguage("hi"); });
+    render(<ReviewsFeedback serviceType="chadhava" benefits={["शांति"]} />);
+
+    const benefitCard = screen.getByTestId("benefit-highlight");
+    expect(benefitCard).toHaveTextContent("मैंने यह चढ़ावा बुक किया");
+    expect(benefitCard).not.toHaveTextContent("I booked");
+    expect(benefitCard.querySelector(".rf-city")).toHaveTextContent("वाराणसी");
+    await act(async () => { await i18n.changeLanguage("en"); });
+  });
+
   test.each(["puja", "chadhava"])("never repeats an avatar among the cards shown together (%s)", (serviceType) => {
     const { container } = render(<ReviewsFeedback serviceType={serviceType} benefits={["Peace"]} />);
     const pageCount = Math.max(container.querySelectorAll(".rf-dots button").length, 1);
