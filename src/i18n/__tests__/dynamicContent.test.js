@@ -135,7 +135,9 @@ describe('new Pooja from the API', () => {
     const [puja] = await fetchPujaList();
     expect(puja.title).toBe(title);
     expect(puja.benefits[0].title).toBe(benefit);
-    expect(puja.packageDetails[0].name).toBe(pkg);
+    // Package labels are display-only; the package itself keeps its English name (booking payload).
+    expect(puja.packageDisplayNames[String(puja.packageDetails[0].id)]).toBe(pkg);
+    expect(puja.packageDetails[0].name).toBe('Single Devotee');
     expect(puja.addOns[0].name).toBe(addon);
     expect(puja.category).toBe(category);
     // English source, prices and filter keys are preserved for booking and URLs.

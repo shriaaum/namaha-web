@@ -173,7 +173,7 @@ function PujaDetail() {
   const packageLabel = (pkg) => (
     pkg?.isFallbackPackage && PACKAGE_LABEL_KEYS[pkg?.name]
       ? t(PACKAGE_LABEL_KEYS[pkg.name])
-      : localizePackageName(pkg?.name, t, i18n.language)
+      : localizePackageName(puja?.packageDisplayNames?.[String(pkg?.id)] || pkg?.name, t, i18n.language)
   );
 
   const [loading, setLoading] = useState(true);

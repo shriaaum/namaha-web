@@ -50,13 +50,44 @@ jobs:
             -t namaha-web .
           sudo docker compose up -d --force-recreate
 
-          active_html="$(curl -fsS --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:3001/)"
+          # Docker can publish 3001 before `serve` has accepted its first request.
+          # Wait for the container health check and then for the mapped host port,
+          # but fail quickly for a crash or an explicitly unhealthy container.
+          ready=0
+          deadline=$((SECONDS + 90))
+          while (( SECONDS < deadline )); do
+            container_state="$(sudo docker inspect --format '{{.State.Status}}' namaha-web 2>/dev/null || true)"
+            health_state="$(sudo docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' namaha-web 2>/dev/null || true)"
+
+            if [[ "$container_state" == "exited" || "$container_state" == "dead" || "$health_state" == "unhealthy" ]]; then
+              echo "Frontend container failed to become ready (state=$container_state, health=$health_state)."
+              sudo docker logs --tail 200 namaha-web || true
+              exit 1
+            fi
+
+            if [[ "$container_state" == "running" && "$health_state" == "healthy" ]]; then
+              if active_html="$(curl -fsS --max-time 5 http://127.0.0.1:3001/)"; then
+                ready=1
+                break
+              fi
+            fi
+            sleep 2
+          done
+
+          if (( ! ready )); then
+            echo "Frontend did not become healthy within 90 seconds (state=$container_state, health=$health_state)."
+            sudo docker logs --tail 200 namaha-web || true
+            exit 1
+          fi
+
           active_bundle="$(printf '%s' "$active_html" | grep -oE '/static/js/main\.[A-Za-z0-9]+\.js' | head -n 1)"
           if [[ -z "$active_bundle" || "$active_bundle" == "/static/js/main.69149353.js" ]]; then
             echo "Deployment verification failed: stale or missing frontend bundle."
             exit 1
           fi
-          if ! sudo docker exec namaha-web sh -c "grep -R -F -q 'REACT_APP_RAZORPAY_KEY_ID' /app/build/static/js"; then
+
+          # The key can land in any code-split chunk, not only main.*.js.
+          if ! sudo docker exec namaha-web sh -c "grep -R -E -q 'rzp_(live|test)_[A-Za-z0-9]+' /app/build/static/js"; then
             echo "Deployment verification failed: active bundle lacks Razorpay checkout configuration."
             exit 1
           fi

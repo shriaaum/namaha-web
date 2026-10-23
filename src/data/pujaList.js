@@ -372,13 +372,18 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
       price: `₹${addon.price}`,
       id: addon._id,
     })) || [],
+  // Package `name` stays English: it goes into the booking payload/snapshot.
+  // Localized labels are display-only, looked up by package id.
   packageDetails:
     apiPuja.packageDetails?.map((pkg) => ({
       persons: pkg.persons,
-      name: pkg.name,
+      name: pkg.nameEn || pkg.name,
       price: `₹${pkg.price}`,
       id: pkg._id,
     })) || [],
+  packageDisplayNames: Object.fromEntries(
+    (apiPuja.packageDetails || []).map((pkg) => [String(pkg._id), pkg.name])
+  ),
   imageClass: `pl-card-${Math.floor(Math.random() * 3) + 1}`,
   // templeName: temple/venue name (API may return as temple.name, temple.templeName, or templeName)
   templeName: apiPuja.temple?.name || apiPuja.temple?.templeName || apiPuja.templeName || apiPuja.customSection || null,
