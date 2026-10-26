@@ -974,38 +974,47 @@ body.hide-whatsapp-fab .wa-fab-wrap {
   }
 }
 
-/* Related Pooja card stays in the offering flow, above the offering heading. */
+/* Related Pooja recommendation: centered popup over the Chadhava page. */
+.chd-related-pooja-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(28, 12, 4, 0.55);
+  animation: chd-related-fade 0.2s ease-out;
+}
+
 .chd-related-pooja {
-  display: flex;
   position: relative;
-  width: min(100%, 760px);
-  min-height: 132px;
-  margin: 0 0 1.25rem;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 480px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   border: 1px solid #f5c990;
-  border-radius: 16px;
-  background: linear-gradient(115deg, #fffaf3, #fff 62%);
-  box-shadow: 0 10px 28px rgba(120, 53, 15, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fffaf3, #fff 55%);
+  box-shadow: 0 24px 60px rgba(67, 20, 7, 0.35);
+  animation: chd-related-pop 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 
 .chd-related-pooja-image {
-  width: 180px;
-  min-width: 180px;
+  display: block;
+  width: 100%;
   height: auto;
-  align-self: stretch;
-  object-fit: contain;
-  object-position: center;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   background: #fff7ed;
 }
 
 .chd-related-pooja-content {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 0.85rem 3rem 0.85rem 1rem;
+  align-items: center;
+  text-align: center;
+  padding: 1.1rem 1.4rem 1.4rem;
 }
 
 .chd-related-pooja-eyebrow,
@@ -1017,16 +1026,16 @@ body.hide-whatsapp-fab .wa-fab-wrap {
 
 .chd-related-pooja-eyebrow {
   color: #9a3412;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .chd-related-pooja-name {
-  margin-top: 0.2rem;
+  margin-top: 0.4rem;
   color: #431407;
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -1034,47 +1043,57 @@ body.hide-whatsapp-fab .wa-fab-wrap {
 .chd-related-pooja-description {
   display: -webkit-box;
   overflow: hidden;
-  margin-top: 0.3rem;
+  margin-top: 0.45rem;
   color: #78716c;
-  font-size: 0.86rem;
-  line-height: 1.45;
+  font-size: 0.88rem;
+  line-height: 1.5;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
 .chd-related-pooja-price {
-  margin-top: 0.45rem;
+  margin-top: 0.7rem;
   color: #9a3412;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
 .chd-related-pooja-view {
-  margin-top: 0.55rem;
-  padding: 0.5rem 0.85rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #c2410c;
   color: #fff;
   cursor: pointer;
   font: inherit;
-  font-size: 0.84rem;
+  font-size: 0.98rem;
   font-weight: 700;
+  transition: background 0.15s ease;
+}
+
+.chd-related-pooja-view:hover,
+.chd-related-pooja-view:focus-visible {
+  background: #9a3412;
+  outline: none;
 }
 
 .chd-related-pooja-close {
   position: absolute;
-  top: 0.38rem;
-  right: 0.45rem;
-  width: 1.6rem;
-  height: 1.6rem;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   color: #57534e;
   cursor: pointer;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   line-height: 1;
 }
 
@@ -1084,34 +1103,34 @@ body.hide-whatsapp-fab .wa-fab-wrap {
   outline: none;
 }
 
+@keyframes chd-related-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes chd-related-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (max-width: 480px) {
-  .chd-related-pooja {
-    display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
-    min-height: 0;
-    margin-bottom: 1rem;
-  }
-
-  .chd-related-pooja-image {
-    width: 96px;
-    min-width: 0;
-    height: 100%;
-  }
-
   .chd-related-pooja-content {
-    padding: 0.75rem 2.25rem 0.75rem 0.75rem;
+    padding: 0.95rem 1rem 1.1rem;
   }
 
   .chd-related-pooja-name {
-    font-size: 0.92rem;
+    font-size: 1rem;
   }
 
   .chd-related-pooja-description {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
   }
+}
 
-  .chd-related-pooja-view {
-    width: 100%;
+@media (prefers-reduced-motion: reduce) {
+  .chd-related-pooja-overlay,
+  .chd-related-pooja {
+    animation: none;
   }
 }
 

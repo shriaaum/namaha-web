@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
 import { normalizeApiSoldTag, isPujaUserSoldOut, getEventDateTimeRawInIST, localizePooja } from '../../data/pujaList';
@@ -381,6 +382,53 @@ function ChadhavaDetail() {
     navigate(`/puja/${encodeURIComponent(pujaId)}`);
   };
 
+  // Centered popup: close on Escape and lock background scroll while open.
+  const relatedPujaOpen = Boolean(showRelatedPuja && relatedPuja && relatedPujaView);
+  useEffect(() => {
+    if (!relatedPujaOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') dismissRelatedPuja();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relatedPujaOpen, relatedPujaStorageKey]);
+
+  const relatedPujaPopup = relatedPujaOpen ? createPortal(
+    <div
+      className="chd-related-pooja-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) dismissRelatedPuja();
+      }}
+    >
+      <div className="chd-related-pooja" role="dialog" aria-modal="true" aria-label={t('relatedPooja.title')}>
+        <button type="button" className="chd-related-pooja-close" onClick={dismissRelatedPuja} aria-label={t('relatedPooja.close')} autoFocus>×</button>
+        {relatedPujaBanner && (
+          <img
+            className="chd-related-pooja-image"
+            src={optimizedImage(relatedPujaBanner.url, 640, relatedPujaBanner.variants)}
+            srcSet={optimizedSrcSet(relatedPujaBanner.url, [320, 640, 960], relatedPujaBanner.variants)}
+            sizes="(max-width: 520px) 92vw, 480px"
+            alt=""
+          />
+        )}
+        <div className="chd-related-pooja-content">
+          <p className="chd-related-pooja-eyebrow">{t('relatedPooja.title')}</p>
+          <p className="chd-related-pooja-name">{relatedPujaView.name || relatedPujaView.title}</p>
+          {relatedPujaView.description && <p className="chd-related-pooja-description">{relatedPujaView.description}</p>}
+          {relatedPujaPrice != null && <p className="chd-related-pooja-price">{t('relatedPooja.fromPrice', { price: relatedPujaPrice.toLocaleString('en-IN') })}</p>}
+          <button type="button" className="chd-related-pooja-view" onClick={viewRelatedPuja}>{t('relatedPooja.viewPooja')}</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  ) : null;
+
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
     tabScrollLockRef.current = true;
@@ -651,28 +699,6 @@ function ChadhavaDetail() {
               sectionRefs.current.packages = el;
             }}
           >
-            {showRelatedPuja && relatedPuja && relatedPujaView && (
-              <aside className="chd-related-pooja" role="dialog" aria-label={t('relatedPooja.title')}>
-                <button type="button" className="chd-related-pooja-close" onClick={dismissRelatedPuja} aria-label={t('relatedPooja.close')}>×</button>
-                {relatedPujaBanner && (
-                  <img
-                    className="chd-related-pooja-image"
-                    src={optimizedImage(relatedPujaBanner.url, 320, relatedPujaBanner.variants)}
-                    srcSet={optimizedSrcSet(relatedPujaBanner.url, [320, 640], relatedPujaBanner.variants)}
-                    sizes="(max-width: 480px) 96px, 180px"
-                    alt=""
-                    loading="lazy"
-                  />
-                )}
-                <div className="chd-related-pooja-content">
-                  <p className="chd-related-pooja-eyebrow">{t('relatedPooja.title')}</p>
-                  <p className="chd-related-pooja-name">{relatedPujaView.name || relatedPujaView.title}</p>
-                  {relatedPujaView.description && <p className="chd-related-pooja-description">{relatedPujaView.description}</p>}
-                  {relatedPujaPrice != null && <p className="chd-related-pooja-price">{t('relatedPooja.fromPrice', { price: relatedPujaPrice.toLocaleString('en-IN') })}</p>}
-                  <button type="button" className="chd-related-pooja-view" onClick={viewRelatedPuja}>{t('relatedPooja.viewPooja')}</button>
-                </div>
-              </aside>
-            )}
             <h2 className="chd-section-title">{t('chadhava.chooseOffering')}</h2>
             {isBookingBlocked ? (
               <p className="chd-booking-closed-banner" role="status">
@@ -872,6 +898,7 @@ function ChadhavaDetail() {
           )}
         </div>
       </div>
+      {relatedPujaPopup}
       <CartAddedToast show={cartToast} onClose={() => setCartToast(false)} />
     </>
   );
