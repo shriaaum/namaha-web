@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import axiosInstance from "../../lib/instance";
+import { payCartOrder, apiMessage } from "../../lib/cartPayment";
+import { getRazorpayPublicKey } from "../../lib/razorpayConfig";
 import { translateBookedText, translateCmsText } from "../../i18n/cmsText";
 import { getDateLocale } from "../../i18n/content";
 import { localizeApiError } from "../../i18n/apiErrors";
@@ -21,9 +23,14 @@ function MyBookings() {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const fetchBookings = useCallback(async () => {
+  // Payment retry: which booking is being paid, and the last outcome to show the user.
+  const [retryingId, setRetryingId] = useState(null);
+  const [notice, setNotice] = useState(null); // { type: "success" | "error", text }
+
+  // `silent` refreshes the list in place (after a payment) without the full-page spinner.
+  const fetchBookings = useCallback(async ({ silent } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
 
       const response = await axiosInstance.get("/bookings/my-bookings", {
@@ -44,6 +51,66 @@ function MyBookings() {
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  // Payment status shown to the user. Unpaid bookings must not look like an ordinary "Pending" booking.
+  const getPaymentState = (b) => {
+    const raw = String(b.paymentStatus || "").toLowerCase();
+    if (raw === "success") return "success";
+    if (raw === "failed") return "failed";
+    if (raw === "refunded") return "refunded";
+    return "pending";
+  };
+
+  // Mirrors the server rules: only unpaid, un-slotted (no pandit) bookings can be retried here.
+  const canRetryPayment = (b) =>
+    ["pending", "failed"].includes(getPaymentState(b)) &&
+    ["pending", "initiated"].includes(b.status) &&
+    !b.panditId &&
+    !(b.slots && b.slots.length);
+
+  const handleRetryPayment = async (booking) => {
+    const bookingId = booking._id ?? booking.id;
+    if (retryingId) return;
+    setNotice(null);
+    if (!getRazorpayPublicKey()) {
+      setNotice({ type: "error", text: t("billing.errRazorpayKey") });
+      return;
+    }
+    setRetryingId(bookingId);
+    try {
+      const res = await axiosInstance.post("/cart/retry", { bookingId });
+      if (res.data?.alreadyPaid) {
+        // Razorpay had already taken the money; the server just finalised the booking.
+        setNotice({ type: "success", text: t("myBookings.paymentReceived") });
+        await fetchBookings({ silent: true });
+        setRetryingId(null);
+        return;
+      }
+      await payCartOrder({
+        order: res.data,
+        prefill: {
+          name: booking.devoteeDetails?.name || "",
+          email: booking.devoteeDetails?.email || "",
+          contact: booking.devoteeDetails?.phone || "",
+        },
+        description: getBookingDisplayData(booking).name,
+        messages: {
+          noKey: t("billing.errRazorpayKey"),
+          failed: t("billing.paymentFailed"),
+          syncing: t("cart.errSyncing"),
+        },
+        onPaid: () => {
+          setNotice({ type: "success", text: t("myBookings.paymentReceived") });
+          fetchBookings({ silent: true });
+        },
+        onError: (text) => setNotice({ type: "error", text }),
+        onSettled: () => setRetryingId(null),
+      });
+    } catch (err) {
+      setNotice({ type: "error", text: apiMessage(err, t("myBookings.retryFailed")) });
+      setRetryingId(null);
+    }
+  };
 
   const handleViewBooking = (bookingId) => {
     setSelectedBookingId(bookingId);
@@ -155,6 +222,12 @@ function MyBookings() {
         </p>
       </div>
 
+      {notice && (
+        <div className={`payment-notice payment-notice--${notice.type}`} role="status">
+          {notice.text}
+        </div>
+      )}
+
       {/* Bookings List */}
       {bookings.length === 0 ? (
         <p>{t("myBookings.empty")}</p>
@@ -162,10 +235,15 @@ function MyBookings() {
         <div className="bookings-grid">
           {bookings.map((booking) => {
             const d = getBookingDisplayData(booking);
+            const payState = getPaymentState(booking);
+            const unpaid = payState === "pending" || payState === "failed";
             return (
               <div key={d.id || booking._id} className="booking-card">
-                <div className={`status-badge ${getStatusBadgeClass(booking.status)}`}>
-                  {getStatusText(booking.status)}
+                {/* Unpaid bookings show their payment state instead of the booking status. */}
+                <div className={`status-badge ${unpaid ? (payState === "failed" ? "status-expired" : "status-pending") : getStatusBadgeClass(booking.status)}`}>
+                  {unpaid
+                    ? t(payState === "failed" ? "myBookings.payBadgeFailed" : "myBookings.payBadgePending")
+                    : getStatusText(booking.status)}
                 </div>
 
                 <div className="booking-content">
@@ -198,6 +276,29 @@ function MyBookings() {
                   <div className="booking-price">
                     ₹ {Number(d.price).toLocaleString("en-IN")}
                   </div>
+
+                  <div className={`payment-pill payment-pill--${payState}`}>
+                    {t("myBookings.paymentStatusLabel", {
+                      status: t(
+                        {
+                          success: "myBookings.paymentSuccess",
+                          pending: "myBookings.paymentPending",
+                          failed: "myBookings.paymentFailed",
+                          refunded: "myBookings.paymentRefunded",
+                        }[payState]
+                      ),
+                    })}
+                  </div>
+
+                  {canRetryPayment(booking) && (
+                    <button
+                      className="retry-btn"
+                      disabled={Boolean(retryingId)}
+                      onClick={() => handleRetryPayment(booking)}
+                    >
+                      {retryingId === (booking._id ?? booking.id) ? t("myBookings.retrying") : t("myBookings.retryPayment")}
+                    </button>
+                  )}
 
                   <button
                     className="view-btn"

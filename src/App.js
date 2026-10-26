@@ -18,6 +18,7 @@ const ChadhavaDetail = lazy(() => import('./components/Chadhava/ChadhavaDetail')
 const Profile        = lazy(() => import('./components/Profile/Profile'));
 const LoginPage      = lazy(() => import('./components/LoginPage/LoginPage'));
 const BillingPage    = lazy(() => import('./components/BillingPage/BillingPage'));
+const CartPage       = lazy(() => import('./components/Cart/CartPage'));
 const MyBookings     = lazy(() => import('./components/MyBooking/MyBooking'));
 const BookingDetailsModal = lazy(() => import('./components/BookingDetailsModal/BookingDetailsModal'));
 const WhatsAppFAB    = lazy(() => import('./components/WhatsAppFAB/WhatsAppFAB'));
@@ -214,6 +215,14 @@ function App() {
           <Layout>
             <Suspense fallback={<PageLoader />}>
               <BillingPage />
+            </Suspense>
+          </Layout>
+        } />
+
+        <Route path="/cart" element={
+          <Layout>
+            <Suspense fallback={<PageLoader />}>
+              <CartPage />
             </Suspense>
           </Layout>
         } />

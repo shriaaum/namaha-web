@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../LanguageSelector/LanguageSelector';
+import { useCart } from '../../lib/cart';
 import './Layout.css';
 
 const HomeIcon = () => (
@@ -82,6 +83,7 @@ function Layout({ children }) {
     const navigate = useNavigate();
     const [menuOpen, setMenuOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const { count: cartCount } = useCart();
     const [user, setUser] = useState(null);
     const closeMenu = () => setMenuOpen(false);
 
@@ -324,6 +326,14 @@ function Layout({ children }) {
                         {/* <li><a href="#library" onClick={closeMenu}>Library</a></li> */}
                     </ul>
                     <div className="nav-right">
+                        <Link to="/cart" className="cart-nav-btn" aria-label={t('cart.title', 'Your cart')}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 4h2l2.2 11h10.4L20 8H6.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                <circle cx="9" cy="19.5" r="1.3" fill="currentColor" />
+                                <circle cx="17" cy="19.5" r="1.3" fill="currentColor" />
+                            </svg>
+                            {cartCount > 0 && <span className="cart-nav-badge">{cartCount}</span>}
+                        </Link>
                         <LanguageSelector />
                         {/* Profile icon always visible; dropdown only when logged in */}
                         <div className="profile-container">
