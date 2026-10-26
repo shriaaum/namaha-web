@@ -9,7 +9,7 @@ import { translateCmsText } from "../../i18n/cmsText";
 import { localizeApiError, localizeApiMessage } from "../../i18n/apiErrors";
 import { localizePackageName } from "../../i18n/packageNames";
 import Footer from "../Footer/Footer";
-import { setExitIntentContext, markBookingCompleted } from "../../lib/exitIntentContext";
+import { setExitIntentContext, markBookingCompleted, markPendingBooking, clearPendingBooking, setExitIntentSuppressed } from "../../lib/exitIntentContext";
 import "./BillingPage.css";
 import SavedAddresses from "./SavedAddresses";
 import useSavedAddresses from "./useSavedAddresses";
@@ -597,6 +597,7 @@ function BillingPage() {
               try {
                 sessionStorage.setItem("pendingBookingId", id);
               } catch {}
+              markPendingBooking();
             }
             lastAutoSaveKeyRef.current = autoSaveKey;
             console.log("✅ Pending booking saved:", res.data);
@@ -1201,6 +1202,9 @@ function BillingPage() {
 
       modal: {
         ondismiss: function () {
+          // Closed without paying: the exit-intent popup may show again.
+          setExitIntentSuppressed(false);
+          clearPendingBooking();
           paymentStartedRef.current = false;
           setLoading(false);
           setPostPaymentLoading(false);
@@ -1210,6 +1214,8 @@ function BillingPage() {
 
     const rzp = new window.Razorpay(options);
     rzp.on("payment.failed", function (response) {
+      // Checkout may stay open for a retry; suppression ends on dismiss.
+      clearPendingBooking();
       paymentStartedRef.current = false;
       setLoading(false);
       console.error("❌ Razorpay payment failed:", response.error);
@@ -1227,6 +1233,7 @@ function BillingPage() {
         );
       }
     });
+    setExitIntentSuppressed(true);
     rzp.open();
   };
 
