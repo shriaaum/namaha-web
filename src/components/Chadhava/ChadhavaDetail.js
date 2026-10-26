@@ -109,6 +109,8 @@ const CART_STORAGE_PREFIX = 'shriaaum.chadhavaCart:';
 // customer actively dismisses it. `Shown` keys from the earlier behaviour are
 // deliberately ignored so they cannot suppress a valid recommendation.
 const RELATED_POOJA_DISMISSED_STORAGE_PREFIX = 'shriaaum.relatedPoojaDismissed:';
+// The related Pooja popup waits this long after a Chadhava page opens.
+const RELATED_POOJA_POPUP_DELAY_MS = 10000;
 
 const SECTION_TABS = [
   { id: 'packages', labelKey: 'detailTabs.packages' },
@@ -149,6 +151,7 @@ function ChadhavaDetail() {
   const [relatedPuja, setRelatedPuja] = useState(null);
   const [showRelatedPuja, setShowRelatedPuja] = useState(false);
   const relatedPujaRequestRef = useRef(false);
+  const [relatedPujaDelayDone, setRelatedPujaDelayDone] = useState(false);
 
   // locale defaults to en-GB: the billing/booking payload keeps the English date.
   const formatEventDate = (value, locale = 'en-GB') => {
@@ -291,6 +294,13 @@ function ChadhavaDetail() {
     setShowRelatedPuja(false);
   }, [id]);
 
+  // Restart the popup delay every time a different Chadhava is opened.
+  useEffect(() => {
+    setRelatedPujaDelayDone(false);
+    const timer = setTimeout(() => setRelatedPujaDelayDone(true), RELATED_POOJA_POPUP_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [id]);
+
   // Once per loaded chadhava: restore the saved selection, otherwise preselect
   // the first available offering (qty 1). Never auto-selects when booking is closed.
   useEffect(() => {
@@ -383,7 +393,7 @@ function ChadhavaDetail() {
   };
 
   // Centered popup: close on Escape and lock background scroll while open.
-  const relatedPujaOpen = Boolean(showRelatedPuja && relatedPuja && relatedPujaView);
+  const relatedPujaOpen = Boolean(relatedPujaDelayDone && showRelatedPuja && relatedPuja && relatedPujaView);
   useEffect(() => {
     if (!relatedPujaOpen) return undefined;
     const onKeyDown = (event) => {
