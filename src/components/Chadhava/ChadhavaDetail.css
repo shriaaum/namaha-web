@@ -1119,3 +1119,17 @@ body.hide-whatsapp-fab .wa-fab-wrap {
 .chd-reviews-anchor {
   scroll-margin-top: calc(var(--header-offset, 120px) + 12px);
 }
+
+.chd-sticky-cart {
+  flex: none;
+  margin: 0 0 0 8px;
+  padding: 0 14px;
+  min-height: 48px;
+  background: #fff;
+  color: #c2410c;
+  border: 1.5px solid #c2410c;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}

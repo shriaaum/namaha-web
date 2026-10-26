@@ -10,6 +10,8 @@ import Footer from "../Footer/Footer";
 import ReviewsFeedback from "../Reviews/ReviewsFeedback";
 import { setExitIntentContext } from "../../lib/exitIntentContext";
 import { localizePackageName } from "../../i18n/packageNames";
+import { addToCart } from "../../lib/cart";
+import CartAddedToast from "../Cart/CartAddedToast";
 
 const renderRichText = (text) => {
   if (!text || typeof text !== "string") return null;
@@ -178,6 +180,7 @@ function PujaDetail() {
 
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState(null);
+  const [cartToast, setCartToast] = useState(false);
   const [puja, setPuja] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
   // Replace static countdown state
@@ -240,6 +243,22 @@ function PujaDetail() {
     };
 
     navigate("/billing", { state: billingState });
+  };
+
+  // Same item the "Book" button sends to /billing, but queued in the unified cart instead.
+  // Fallback packages have no real id, so the server could not price them.
+  const handleAddToCart = (pkg) => {
+    if (isPujaUserSoldOut(puja) || pkg?.isFallbackPackage || !pkg?.id) return;
+    const added = addToCart({
+      type: "puja",
+      itemId: String(puja?._id || puja?.id),
+      packageId: String(pkg.id),
+      addons: [],
+      title: puja?.name || puja?.title || "",
+      image: puja?.bannerUrls?.[0]?.url || null,
+    });
+    if (added) setCartToast(true);
+    else alert(t("cart.full", "Your cart is full. Please complete checkout first."));
   };
 
   useEffect(() => {
@@ -666,6 +685,15 @@ function PujaDetail() {
                     >
                       {isBookingBlocked ? t("pujaDetail.bookingClosedCaps") : t("pujaDetail.bookPuja")}
                     </button>
+                    {!isBookingBlocked && !pkg.isFallbackPackage && (
+                      <button
+                        type="button"
+                        className="cart-add-btn"
+                        onClick={(e) => { e.stopPropagation(); handleAddToCart(pkg); }}
+                      >
+                        {t("cart.addToCart", "Add to cart")}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -782,6 +810,8 @@ function PujaDetail() {
         </div>
       </div>
       <Footer />
+
+      <CartAddedToast show={cartToast} onClose={() => setCartToast(false)} />
 
       {/* Mobile sticky bottom CTA — replaces bottom nav on puja detail pages */}
       {!isBookingBlocked && (

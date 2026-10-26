@@ -11,6 +11,8 @@ import ReviewsFeedback from '../Reviews/ReviewsFeedback';
 import PrasadamCard from '../Prasadam/PrasadamCard';
 import { optimizedImage, optimizedSrcSet } from '../../lib/img';
 import { setExitIntentContext } from '../../lib/exitIntentContext';
+import { addToCart } from '../../lib/cart';
+import CartAddedToast from '../Cart/CartAddedToast';
 import { findRelatedPuja, getPujaBannerImage, getPujaPackagePrice } from './relatedPuja';
 
 const renderRichText = (text) => {
@@ -130,6 +132,7 @@ function ChadhavaDetail() {
   const { t, i18n } = useTranslation();
   const [activeFaq, setActiveFaq] = useState(null);
   const [cart, setCart] = useState({});
+  const [cartToast, setCartToast] = useState(false);
   // True once the cart was restored or defaulted for the loaded chadhava.
   const [cartReady, setCartReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -497,6 +500,22 @@ function ChadhavaDetail() {
     });
   };
 
+  // Queues the current selection in the unified cart (ids + quantities only; the server prices it).
+  const handleAddToCart = () => {
+    if (isBookingBlocked || getTotalItems() === 0) return;
+    const added = addToCart({
+      type: 'chadhava',
+      itemId: String(detail?._id || detail?.id || id),
+      addons: Object.entries(cart)
+        .filter(([, qty]) => qty > 0)
+        .map(([offeringId, qty]) => ({ id: offeringId, quantity: qty })),
+      title: detail?.title || 'Chadhava',
+      image: detail?.bannerImage || null,
+    });
+    if (added) setCartToast(true);
+    else alert(t('cart.full', 'Your cart is full. Please complete checkout first.'));
+  };
+
   if (loading) {
     return (
       <main className="chd-page">
@@ -846,8 +865,14 @@ function ChadhavaDetail() {
               {firstAvailableIndex < 0 ? t('chadhava.noOfferings') : `${t('chadhava.chooseOffering')} →`}
             </button>
           )}
+          {!isBookingBlocked && getTotalItems() > 0 && (
+            <button type="button" className="chd-sticky-cart" onClick={handleAddToCart}>
+              {t('cart.addToCart', 'Add to cart')}
+            </button>
+          )}
         </div>
       </div>
+      <CartAddedToast show={cartToast} onClose={() => setCartToast(false)} />
     </>
   );
 }
