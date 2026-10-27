@@ -63,7 +63,7 @@ export default function ExitIntentPopup() {
   if (!eligibleRef.current) return;
   const state = window.history.state || {};
   if (state.exitGuard) { onGuardRef.current = true; guardKeyRef.current = state.key ?? null; return; }
-  if ((state.idx ?? 0) !== 0) return; // an in-app entry is behind this one: Back stays on the site
+  //if ((state.idx ?? 0) !== 0) return; // an in-app entry is behind this one: Back stays on the site
   const key = state.key ?? "default";
   if (guardedKeys.has(key)) return;
   if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
