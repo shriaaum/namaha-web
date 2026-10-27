@@ -233,6 +233,49 @@ describe('context', () => {
   });
 });
 
+describe('desktop Back on the home page', () => {
+  test('home as first page -> browser Back shows the popup instead of leaving', async () => {
+    mount('/');
+    advance(6000);
+    fireEvent.pointerDown(window); // guard needs a user gesture
+    expect(window.history.state.exitGuard).toBe(true);
+    await back();
+    expect(popupShown()).toBe(true);
+    expect(window.location.pathname).toBe('/');
+    expect(getExitIntentContext().pageType).toBe('home');
+  });
+
+  test('language home URLs (/en, /hi, /tu, /te) are guarded too', () => {
+    ['/en', '/hi', '/tu', '/te'].forEach((path) => {
+      sessionStorage.clear();
+      const { unmount } = mount(path);
+      advance(6000);
+      fireEvent.pointerDown(window);
+      expect(window.history.state.exitGuard).toBe(true);
+      unmount();
+    });
+  });
+
+  test('desktop Back guard is not added on non-home pages (unchanged behaviour)', () => {
+    ['/puja', '/puja/abc', '/chadhava/c1', '/billing'].forEach((path) => {
+      const { unmount } = mount(path);
+      advance(6000);
+      fireEvent.pointerDown(window);
+      expect(window.history.state?.exitGuard).toBeUndefined();
+      unmount();
+    });
+  });
+
+  test('desktop home Back within 5s lets the Back proceed instead of trapping', async () => {
+    mount('/');
+    fireEvent.pointerDown(window);
+    const historyBack = jest.spyOn(window.history, 'back');
+    await back();
+    expect(popupShown()).toBe(false);
+    expect(historyBack).toHaveBeenCalledTimes(2); // ours + the re-issued one
+  });
+});
+
 describe('mobile triggers', () => {
   beforeEach(() => setUA(MOBILE_UA));
 

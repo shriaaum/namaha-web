@@ -61,9 +61,11 @@ export default function ExitIntentPopup() {
  const close=useCallback(()=>{storage.set("exitIntentClosedUntil",String(Date.now()+CLOSED_COOLDOWN_MS));setOpen(false)},[]);
  const show=useCallback((trigger)=>{const reason=blockedReason();if(reason){debug(`not shown (${trigger}):`,reason);return false}debug(`shown (${trigger})`);openRef.current=true;session.set("exitIntentVisitShown","1");let u={};try{u=JSON.parse(storage.get("user")||"{}")}catch{}setName(u.name||u.fullName||"");setPhone(String(u.phone||u.mobile||"").replace(/^\+?91/,""));setOpen(true);return true},[blockedReason]);
 
- /** Mobile Back guard: only on the tab's first app entry (Back would leave the site) and after a user gesture (Chrome skips entries pushed without one). */
+ /** Back guard: only on the tab's first app entry (Back would leave the site) and after a user gesture (Chrome skips entries pushed without one).
+  *  Mobile: every eligible page. Desktop: the home page only, so the browser Back button there shows the popup before leaving the site. */
  const armBackGuard = useCallback(() => {
-  if (!isMobile() || !eligibleRef.current) return;
+  if (!eligibleRef.current) return;
+  if (!isMobile() && matchRoute(window.location.pathname)?.pageType !== "home") return;
   const state = window.history.state || {};
   if (state.exitGuard) { onGuardRef.current = true; guardKeyRef.current = state.key ?? null; return; }
   if ((state.idx ?? 0) !== 0) return; // an in-app entry is behind this one: Back stays on the site
