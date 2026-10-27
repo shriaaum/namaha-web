@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import "./PujaFilters.css";
 import { SORT_OPTIONS } from "./pujaFilterSort";
 
-function PujaFilters({ temples, occasions, value, onChange, onClear }) {
+function PujaFilters({ temples, occasions, value, onChange, onClear, sortOptions = SORT_OPTIONS, title, subtitle, alwaysShowClear = false }) {
   const { t } = useTranslation();
   const set = (key) => (e) => onChange({ ...value, [key]: e.target.value });
   const active = value.temple || value.occasion || value.sort !== "date";
@@ -19,10 +19,10 @@ function PujaFilters({ temples, occasions, value, onChange, onClear }) {
     <div className="pf-wrap">
     <div className="pf-heading">
       <span className="pf-heading-title">
-        🔎 {t("puja.filterTitle", { defaultValue: "Find your puja" })}
+        🔎 {title || t("puja.filterTitle", { defaultValue: "Find your puja" })}
       </span>
       <span className="pf-heading-sub">
-        {t("puja.filterSubtitle", {
+        {subtitle || t("puja.filterSubtitle", {
           defaultValue: "Filter by temple or occasion, and sort by date or popularity",
         })}
       </span>
@@ -51,14 +51,14 @@ function PujaFilters({ temples, occasions, value, onChange, onClear }) {
       <label className="pf-field">
         <span>{t("puja.sortBy", { defaultValue: "Sort by" })}</span>
         <select value={value.sort} onChange={set("sort")}>
-          {SORT_OPTIONS.map((k) => (
+          {sortOptions.map((k) => (
             <option key={k} value={k}>{sortLabels[k]}</option>
           ))}
         </select>
       </label>
 
-      {active && (
-        <button type="button" className="pf-clear" onClick={onClear}>
+      {(active || alwaysShowClear) && (
+        <button type="button" className="pf-clear" onClick={onClear} disabled={!active}>
           {t("puja.clearFilters", { defaultValue: "Clear filters" })}
         </button>
       )}

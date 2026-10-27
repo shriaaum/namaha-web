@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axiosInstance from '../../lib/instance';
 import {
   PUJA_LIST_GRID_COLUMNS,
@@ -8,6 +8,8 @@ import {
   getEventDateTimeRawInIST,
 } from '../../data/pujaList';
 import './Chadhava.css';
+import PujaFilters from '../PujaList/PujaFilters';
+import { applyPujaFilters, getTempleOptions, getOccasionOptions } from '../PujaList/pujaFilterSort';
 import Footer from '../Footer/Footer';
 import { useTranslation } from 'react-i18next';
 import i18nInstance from '../../i18n';
@@ -18,6 +20,9 @@ import { cardImageProps } from '../../lib/img';
 
 const INITIAL_VISIBLE_CARDS = 4;
 const LOAD_MORE_STEP = 4;
+// Chadhava has no popularity / top-choice data, so only these sorts apply.
+const CHADHAVA_SORT_OPTIONS = ['date', 'name'];
+const titleCase = (v) => String(v || '').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const getItemsFromResponse = (data) => {
   if (Array.isArray(data?.items)) return data.items;
@@ -53,6 +58,11 @@ const normalizeCard = (rawItem = {}) => {
     bannerImage: item.bannerImage || item.image || item.thumbnail || '',
     bannerImageVariants: item.bannerImage ? item.bannerImageVariants : undefined,
     buttonText: item.buttonText || item.ctaText || i18nInstance.t('common.viewDetails'),
+    // Filter values stay English (stable in URLs); labels follow the language.
+    templeName: item.templeName || '',
+    templeNameEn: rawItem.templeName || '',
+    category: titleCase(item.category),
+    categoryEn: titleCase(rawItem.category),
   };
   return {
     ...card,
@@ -94,6 +104,27 @@ function Chadhava() {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_CARDS);
   const navigate = useNavigate();
   const offeringsRef = useRef(null);
+
+  // Filters/sort live in the URL (?temple=&occasion=&sort=) like the Puja list.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortParam = searchParams.get('sort');
+  const filters = {
+    temple: searchParams.get('temple') || '',
+    occasion: searchParams.get('occasion') || '',
+    sort: CHADHAVA_SORT_OPTIONS.includes(sortParam) ? sortParam : 'date',
+  };
+  const setFilters = (next) => {
+    const params = {};
+    if (next.temple) params.temple = next.temple;
+    if (next.occasion) params.occasion = next.occasion;
+    if (next.sort && next.sort !== 'date') params.sort = next.sort;
+    setSearchParams(params, { replace: true });
+  };
+  const filteredCards = useMemo(
+    () => applyPujaFilters(cards, filters),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cards, filters.temple, filters.occasion, filters.sort]
+  );
 
   /* Banner sizing lives in `Chadhava.css` — mirrors `PujaList.css` `.pl-card-banner` */
 
@@ -141,7 +172,7 @@ function Chadhava() {
 
   useEffect(() => {
     setVisibleCount(INITIAL_VISIBLE_CARDS);
-  }, [cards.length]);
+  }, [filteredCards.length]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -156,15 +187,15 @@ function Chadhava() {
         scrollTop + viewportHeight >= fullHeight - halfCardHeightThreshold;
 
       if (!nearBottom) return;
-      setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, cards.length));
+      setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, filteredCards.length));
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, [cards.length]);
+  }, [filteredCards.length]);
 
-  const visibleCards = cards.slice(0, visibleCount);
+  const visibleCards = filteredCards.slice(0, visibleCount);
 
   return (
     <main className="chadhava-page">
@@ -183,7 +214,7 @@ function Chadhava() {
       <section className="ch-offerings" ref={offeringsRef}>
         <div className="ch-offerings-header">
           <h2 className="ch-offerings-title">
-            {t('chadhava.upcoming', { count: cards.length })}
+            {t('chadhava.upcoming', { count: filteredCards.length })}
           </h2>
           {/* <p className="ch-offerings-subtitle">
             Experience the divine with Shri aaum Chadhava SHRI AAUM. Offer Chadhava at renowned
@@ -191,6 +222,20 @@ function Chadhava() {
             performed by our Purohit ji on your behalf.
           </p> */}
         </div>
+
+        {!loading && !error && cards.length > 0 && (
+          <PujaFilters
+            temples={getTempleOptions(cards)}
+            occasions={getOccasionOptions(cards)}
+            value={filters}
+            onChange={setFilters}
+            onClear={() => setFilters({ temple: '', occasion: '', sort: 'date' })}
+            sortOptions={CHADHAVA_SORT_OPTIONS}
+            alwaysShowClear
+            title={t('chadhava.filterTitle', { defaultValue: 'Find your chadhava' })}
+            subtitle={t('chadhava.filterSubtitle', { defaultValue: 'Filter by temple or occasion, and sort by date or name' })}
+          />
+        )}
 
         {loading ? (
           <div className="ch-loading-state" role="status" aria-live="polite">
@@ -201,6 +246,8 @@ function Chadhava() {
           <p className="ch-offerings-subtitle">{localizeApiMessage(errorMessage, t('chadhava.loadError'), t, i18n.language)}</p>
         ) : cards.length === 0 ? (
           <p className="ch-offerings-subtitle">{t('chadhava.empty')}</p>
+        ) : filteredCards.length === 0 ? (
+          <p className="pf-empty">{t('chadhava.noMatch', { defaultValue: 'No chadhava offerings match your filters.' })}</p>
         ) : (
           <div
             className={`ch-card-grid${visibleCards.length === 1 ? ' ch-card-grid--single' : ''}`}

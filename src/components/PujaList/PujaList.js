@@ -154,6 +154,7 @@ function PujaList() {
           occasions={getOccasionOptions(pujaList)}
           value={filters}
           onChange={setFilters}
+          alwaysShowClear
           onClear={() => setFilters({ temple: "", occasion: "", sort: "date" })}
         />
 

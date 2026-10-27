@@ -151,9 +151,6 @@ export default function PrasadamPage() {
             <h2>{product.displayName}</h2>
             <p className="prs-muted">{product.displayDescription}</p>
             <strong>₹{product.price}</strong>
-            {product.imageUrl === "/prasadam-laddu.jpg" && (
-              <small className="prs-credit">Photo: Planetvyom / Wikimedia Commons, CC BY-SA 4.0</small>
-            )}
           </div>
         </div>
 
