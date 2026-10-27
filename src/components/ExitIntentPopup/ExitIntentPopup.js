@@ -65,7 +65,8 @@ export default function ExitIntentPopup() {
   *  Mobile: every eligible page. Desktop: the home page only, so the browser Back button there shows the popup before leaving the site. */
  const armBackGuard = useCallback(() => {
   if (!eligibleRef.current) return;
-  if (!isMobile() && matchRoute(window.location.pathname)?.pageType !== "home") return;
+  //if (!isMobile() && matchRoute(window.location.pathname)?.pageType !== "home") return;
+  if (!isMobile() && !/^\/billing\/?$/.test(window.location.pathname)) return;
   const state = window.history.state || {};
   if (state.exitGuard) { onGuardRef.current = true; guardKeyRef.current = state.key ?? null; return; }
   if ((state.idx ?? 0) !== 0) return; // an in-app entry is behind this one: Back stays on the site
