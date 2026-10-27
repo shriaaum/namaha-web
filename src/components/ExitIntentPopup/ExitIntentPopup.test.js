@@ -34,6 +34,8 @@ const setUA = (ua) => Object.defineProperty(window.navigator, 'userAgent', { val
 const advance = (ms) => { now += ms; };
 const popupShown = () => screen.queryByText('exitPopup.title') !== null;
 const leaveTop = () => fireEvent.mouseOut(document, { clientY: -1, clientX: 400, relatedTarget: null });
+/** The only trigger: a click/tap (arms the Back guard) and then the browser/phone Back button. */
+const clickThenBack = async () => { fireEvent.pointerDown(window); await back(); };
 const flush = () => act(() => new Promise((r) => setTimeout(r, 20)));
 /** jsdom fires popstate asynchronously after history.back(). */
 const back = async () => { await act(async () => { window.history.back(); await new Promise((r) => setTimeout(r, 30)); }); };
@@ -55,70 +57,42 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-describe('desktop triggers', () => {
-  test('puja list -> leave through the top shows the popup (labelled puja-list)', () => {
-    mount('/puja');
-    advance(6000);
-    leaveTop();
-    expect(popupShown()).toBe(true);
-    expect(getExitIntentContext().pageType).toBe('puja-list');
-  });
-
-  test('listing, home, language roots and "chadava" spelling are eligible; others are not', () => {
-    for (const path of ['/chadhava', '/chadava/abc', '/', '/hi', '/te', '/tu']) {
-      sessionStorage.clear();
-      const { unmount } = mount(path);
-      advance(6000);
-      leaveTop();
-      expect([path, popupShown()]).toEqual([path, true]);
-      unmount();
-    }
-    sessionStorage.clear();
-    mount('/about');
-    advance(6000);
-    leaveTop();
-    expect(popupShown()).toBe(false);
-  });
-
-  test('puja detail -> leave within 5s is blocked by dwell, and debug mode says why', () => {
-    localStorage.setItem('exitIntentDebug', '1');
-    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
-    mount('/puja/abc');
-    advance(3000);
-    leaveTop();
-    expect(popupShown()).toBe(false);
-    expect(log).toHaveBeenCalledWith('[exit-intent]', 'not shown (mouse-left-top):', expect.stringMatching(/^dwell 3s < 5s/));
-  });
-
-  test('dwell is measured from the first eligible page view, not reset by navigation', () => {
-    mount('/puja');
-    advance(4000);
-    act(() => navigate('/puja/abc'));
-    advance(1500);
-    leaveTop();
-    expect(popupShown()).toBe(true);
-  });
-
-  test('mouseout with a relatedTarget (still inside the page) does not trigger', () => {
+describe('only the Back button opens the popup', () => {
+  test('mouse leaving through the top or side does NOT open it', () => {
     mount('/puja/abc');
     advance(6000);
-    fireEvent.mouseOut(document, { clientY: -1, relatedTarget: document.body });
-    expect(popupShown()).toBe(false);
-  });
-
-  test('leaving through the left/right edge near the top triggers; low on the side does not', () => {
-    mount('/puja/abc');
-    advance(6000);
-    fireEvent.mouseOut(document, { clientY: 400, clientX: 0, relatedTarget: null });
-    expect(popupShown()).toBe(false);
+    leaveTop();
     fireEvent.mouseOut(document, { clientY: 60, clientX: window.innerWidth, relatedTarget: null });
-    expect(popupShown()).toBe(true);
+    expect(popupShown()).toBe(false);
   });
 
-  test('no auto-open on a timer', async () => {
+  test('switching tabs and coming back does NOT open it', () => {
+    mount('/puja/abc');
+    advance(6000);
+    const setVisibility = (v) => Object.defineProperty(document, 'visibilityState', { value: v, configurable: true });
+    setVisibility('hidden');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    setVisibility('visible');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    expect(popupShown()).toBe(false);
+  });
+
+  test('fast scroll up on mobile does NOT open it', () => {
+    setUA(MOBILE_UA);
+    mount('/puja/abc');
+    advance(6000);
+    let t = 0;
+    jest.spyOn(performance, 'now').mockImplementation(() => t);
+    const scrollTo = (y, at) => { t = at; Object.defineProperty(window, 'scrollY', { value: y, configurable: true }); fireEvent.scroll(window); };
+    scrollTo(0, 0); scrollTo(1200, 1000); scrollTo(100, 1100);
+    expect(popupShown()).toBe(false);
+  });
+
+  test('no auto-open on a timer, and opening/clicking the page does not open it', async () => {
     jest.useFakeTimers();
     try {
-      mount('/puja/abc');
+      mount('/');
+      fireEvent.pointerDown(window);
       advance(120000);
       act(() => { jest.advanceTimersByTime(120000); });
       expect(popupShown()).toBe(false);
@@ -127,54 +101,129 @@ describe('desktop triggers', () => {
     }
   });
 
-  test('tab hidden does not show immediately; shows when the user returns', () => {
-    mount('/puja/abc');
+  test('desktop: home as first page -> Back shows the popup instead of leaving; next Back is not trapped', async () => {
+    mount('/');
     advance(6000);
-    const setVisibility = (v) => Object.defineProperty(document, 'visibilityState', { value: v, configurable: true });
-    setVisibility('hidden');
-    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await clickThenBack();
+    expect(popupShown()).toBe(true);
+    expect(window.location.pathname).toBe('/');
+    expect(getExitIntentContext().pageType).toBe('home');
+
+    fireEvent.click(screen.getByText('×'));
+    fireEvent.pointerDown(window);
+    expect(window.history.state?.exitGuard).toBeUndefined(); // no second guard on the same page
+  });
+
+  test('desktop and mobile: Back works on every eligible page', async () => {
+    for (const ua of [DESKTOP_UA, MOBILE_UA]) {
+      setUA(ua);
+      for (const path of ['/', '/en', '/hi', '/te', '/tu', '/puja', '/puja/abc', '/chadhava', '/chadhava/c1', '/chadava/c1', '/billing']) {
+        localStorage.clear();
+        const { unmount } = mount(path);
+        advance(6000);
+        await clickThenBack();
+        expect([ua === MOBILE_UA ? 'mobile' : 'desktop', path, popupShown()]).toEqual([ua === MOBILE_UA ? 'mobile' : 'desktop', path, true]);
+        unmount();
+      }
+    }
+  });
+
+  test('pages outside the list (e.g. /about) never arm the Back guard', () => {
+    mount('/about');
+    advance(6000);
+    fireEvent.pointerDown(window);
+    expect(window.history.state?.exitGuard).toBeUndefined();
+  });
+
+  test('Back without any click/tap first is not intercepted (browser rule)', () => {
+    Object.defineProperty(navigator, 'userActivation', { value: { hasBeenActive: false }, configurable: true });
+    try {
+      mount('/');
+      advance(6000);
+      fireEvent.pointerDown(window);
+      expect(window.history.state?.exitGuard).toBeUndefined();
+    } finally {
+      delete navigator.userActivation;
+    }
+  });
+
+  test('Back within the first 5s lets the Back proceed, and debug mode says why', async () => {
+    localStorage.setItem('exitIntentDebug', '1');
+    const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+    mount('/puja/abc');
+    advance(3000);
+    const historyBack = jest.spyOn(window.history, 'back');
+    await clickThenBack();
     expect(popupShown()).toBe(false);
-    setVisibility('visible');
-    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    expect(historyBack).toHaveBeenCalledTimes(2); // ours + the re-issued one
+    expect(log).toHaveBeenCalledWith('[exit-intent]', 'not shown (back-button):', expect.stringMatching(/^dwell 3s < 5s/));
+  });
+
+  test('dwell is measured from the first eligible page view, not reset by navigation', async () => {
+    mount('/puja');
+    advance(4000);
+    fireEvent.pointerDown(window);
+    act(() => navigate('/puja/abc'));
+    advance(1500);
+    await back(); // /puja/abc -> /puja (guard entry)
+    await back(); // leaving the site
     expect(popupShown()).toBe(true);
   });
 
-  test('close -> short 30s pause only; after it, every exit attempt shows the popup again', () => {
-    mount('/puja/abc');
+  test('in-app Back between two pages does not trigger; Back that leaves the site does', async () => {
+    mount('/puja');
     advance(6000);
-    leaveTop();
+    fireEvent.pointerDown(window);
+    act(() => navigate('/puja/abc'));
+    await back();
+    expect(window.location.pathname).toBe('/puja');
+    expect(popupShown()).toBe(false);
+    await back();
+    expect(popupShown()).toBe(true);
+  });
+});
+
+describe('repeat rules', () => {
+  test('close -> short 30s pause only; after it, every new visit shows the popup again on Back', async () => {
+    let view = mount('/puja/abc');
+    advance(6000);
+    await clickThenBack();
     fireEvent.click(screen.getByText('×'));
     expect(popupShown()).toBe(false);
+    view.unmount();
 
     advance(10 * 1000);
-    leaveTop(); // mouse still near the top right after closing
+    view = mount('/'); // came back within 30s
+    await clickThenBack();
     expect(popupShown()).toBe(false);
+    view.unmount();
 
     advance(25 * 1000);
-    leaveTop();
+    mount('/');
+    await clickThenBack();
     expect(popupShown()).toBe(true);
   });
 
-  test('shows again in the same session and on every new visit (no once-per-session rule)', () => {
+  test('shows again in the same session (no once-per-session rule)', async () => {
     const view = mount('/puja/abc');
     advance(6000);
-    leaveTop();
+    await clickThenBack();
     expect(popupShown()).toBe(true);
     fireEvent.click(screen.getByText('×'));
     view.unmount();
 
     advance(60 * 1000);
-    mount('/'); // same session, later visit to the home page
-    leaveTop();
+    mount('/');
+    await clickThenBack();
     expect(popupShown()).toBe(true);
   });
 
-  test('an old 24h close (from the previous rule) no longer blocks the popup', () => {
+  test('an old 24h close (from the previous rule) no longer blocks the popup', async () => {
     localStorage.setItem('exitIntentClosedUntil', String(Date.now() + 20 * 3600 * 1000));
     sessionStorage.setItem('exitIntentVisitShown', '1'); // old once-per-session flag
     mount('/puja/abc');
     advance(6000);
-    leaveTop();
+    await clickThenBack();
     expect(popupShown()).toBe(true);
   });
 
@@ -186,39 +235,58 @@ describe('desktop triggers', () => {
 });
 
 describe('booking / payment guards', () => {
-  test('start booking -> cancel payment -> leave shows the popup', () => {
+  test('Back while the payment window is open does not show it; after cancelling payment it does', async () => {
+    mount('/billing');
+    advance(6000);
+    fireEvent.pointerDown(window); // guard armed while nothing blocks
+    setExitIntentSuppressed(true); // Razorpay open
+    const historyBack = jest.spyOn(window.history, 'back');
+    await back();
+    expect(popupShown()).toBe(false);
+    expect(historyBack).toHaveBeenCalledTimes(2); // Back is allowed to proceed
+  });
+
+  test('start booking -> cancel payment -> Back shows the popup', async () => {
     mount('/billing');
     advance(6000);
     sessionStorage.setItem('pendingBookingId', 'b1');
     markPendingBooking();
-    setExitIntentSuppressed(true); // Razorpay open
-    leaveTop();
-    expect(popupShown()).toBe(false);
-
+    setExitIntentSuppressed(true);
     setExitIntentSuppressed(false); // ondismiss
     clearPendingBooking();
-    leaveTop();
+    await clickThenBack();
     expect(popupShown()).toBe(true);
   });
 
-  test('a pending booking id only blocks for 15 minutes', () => {
+  test('a fresh pending booking (< 15 min) blocks it', async () => {
     mount('/billing');
     sessionStorage.setItem('pendingBookingId', 'b1');
     markPendingBooking();
     advance(6000);
-    leaveTop();
+    await clickThenBack();
     expect(popupShown()).toBe(false);
-    advance(15 * 60 * 1000);
-    leaveTop();
+  });
+
+  test('a pending booking older than 15 minutes no longer blocks it', async () => {
+    sessionStorage.setItem('pendingBookingId', 'b1');
+    markPendingBooking();
+    advance(16 * 60 * 1000);
+    mount('/billing');
+    advance(6000);
+    await clickThenBack();
     expect(popupShown()).toBe(true);
   });
 
-  test('suppression resets when the route leaves billing', () => {
-    mount('/billing');
+  test('suppression resets when the route leaves billing', async () => {
+    mount('/'); // visitor lands on home and clicks through to billing
     advance(6000);
+    fireEvent.pointerDown(window);
+    act(() => navigate('/billing'));
     setExitIntentSuppressed(true);
     act(() => navigate('/puja'));
-    leaveTop();
+    await back(); // /puja -> /billing
+    await back(); // /billing -> / (guard entry)
+    await back(); // leaving the site
     expect(popupShown()).toBe(true);
   });
 });
@@ -237,114 +305,18 @@ describe('context', () => {
   });
 });
 
-describe('desktop Back on the home page', () => {
-  test('home as first page -> browser Back shows the popup instead of leaving', async () => {
-    mount('/');
-    advance(6000);
-    fireEvent.pointerDown(window); // guard needs a user gesture
-    expect(window.history.state.exitGuard).toBe(true);
-    await back();
-    expect(popupShown()).toBe(true);
-    expect(window.location.pathname).toBe('/');
-    expect(getExitIntentContext().pageType).toBe('home');
-  });
-
-  test('language home URLs (/en, /hi, /tu, /te) are guarded too', () => {
-    ['/en', '/hi', '/tu', '/te'].forEach((path) => {
-      sessionStorage.clear();
-      const { unmount } = mount(path);
-      advance(6000);
-      fireEvent.pointerDown(window);
-      expect(window.history.state.exitGuard).toBe(true);
-      unmount();
-    });
-  });
-
-  test('desktop Back guard is not added on non-home pages (unchanged behaviour)', () => {
-    ['/puja', '/puja/abc', '/chadhava/c1', '/billing'].forEach((path) => {
-      const { unmount } = mount(path);
-      advance(6000);
-      fireEvent.pointerDown(window);
-      expect(window.history.state?.exitGuard).toBeUndefined();
-      unmount();
-    });
-  });
-
-  test('desktop home Back within 5s lets the Back proceed instead of trapping', async () => {
-    mount('/');
-    fireEvent.pointerDown(window);
-    const historyBack = jest.spyOn(window.history, 'back');
-    await back();
-    expect(popupShown()).toBe(false);
-    expect(historyBack).toHaveBeenCalledTimes(2); // ours + the re-issued one
-  });
-});
-
-describe('mobile triggers', () => {
-  beforeEach(() => setUA(MOBILE_UA));
-
-  test('chadhava detail as first page -> Back shows the popup; next Back is not trapped', async () => {
-    mount('/chadhava/c1');
-    advance(6000);
-    fireEvent.pointerDown(window); // guard needs a user gesture
-    expect(window.history.state.exitGuard).toBe(true);
-    await back();
-    expect(popupShown()).toBe(true);
-    expect(window.location.pathname).toBe('/chadhava/c1');
-
-    fireEvent.click(screen.getByText('×'));
-    fireEvent.pointerDown(window);
-    expect(window.history.state?.exitGuard).toBeUndefined(); // no second guard on the same page
-  });
-
-  test('Back on the first page within 5s lets the Back proceed instead of trapping', async () => {
-    mount('/chadhava/c1');
-    fireEvent.pointerDown(window);
-    const historyBack = jest.spyOn(window.history, 'back');
-    await back();
-    expect(popupShown()).toBe(false);
-    expect(historyBack).toHaveBeenCalledTimes(2); // ours + the re-issued one
-  });
-
-  test('in-app Back between two eligible pages does not trigger', async () => {
-    mount('/puja');
-    advance(6000);
-    fireEvent.pointerDown(window);
-    act(() => navigate('/puja/abc'));
-    await back(); // /puja/abc -> /puja (guard entry)
-    expect(window.location.pathname).toBe('/puja');
-    expect(popupShown()).toBe(false);
-    await back(); // now leaving the site
-    expect(popupShown()).toBe(true);
-  });
-
-  test('fast upward scroll near the top triggers', () => {
-    mount('/puja/abc');
-    advance(6000);
-    let t = 0;
-    jest.spyOn(performance, 'now').mockImplementation(() => t);
-    const scrollTo = (y, at) => { t = at; Object.defineProperty(window, 'scrollY', { value: y, configurable: true }); fireEvent.scroll(window); };
-    scrollTo(0, 0);
-    scrollTo(1200, 1000); // read down the page
-    scrollTo(900, 2000); // slow scroll up
-    expect(popupShown()).toBe(false);
-    scrollTo(200, 2400); // 700px in 400ms... too slow
-    expect(popupShown()).toBe(false);
-    scrollTo(1200, 3000);
-    scrollTo(100, 3100); // 1100px in 100ms, ends near the top
-    expect(popupShown()).toBe(true);
-  });
-});
-
-test('listeners are attached once and removed on unmount', async () => {
-  const add = jest.spyOn(document, 'addEventListener');
-  const remove = jest.spyOn(document, 'removeEventListener');
+test('listeners are attached once and removed on unmount; no mouseout/scroll/visibility listeners', async () => {
+  const addDoc = jest.spyOn(document, 'addEventListener');
+  const addWin = jest.spyOn(window, 'addEventListener');
+  const remove = jest.spyOn(window, 'removeEventListener');
   const { unmount } = mount('/puja');
   act(() => navigate('/puja/abc'));
   act(() => navigate('/about'));
   act(() => navigate('/chadhava'));
   await flush();
-  expect(add.mock.calls.filter(([type]) => type === 'mouseout')).toHaveLength(1);
+  expect(addWin.mock.calls.filter(([type, fn]) => type === 'popstate' && fn.name === 'onPopState')).toHaveLength(1); // the router adds its own popstate listener
+  expect(addDoc.mock.calls.filter(([type]) => ['mouseout', 'visibilitychange'].includes(type))).toHaveLength(0);
+  expect(addWin.mock.calls.filter(([type]) => type === 'scroll')).toHaveLength(0);
   unmount();
-  expect(remove.mock.calls.filter(([type]) => type === 'mouseout')).toHaveLength(1);
+  expect(remove.mock.calls.filter(([type, fn]) => type === 'popstate' && fn.name === 'onPopState')).toHaveLength(1);
 });

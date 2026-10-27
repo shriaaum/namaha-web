@@ -1010,24 +1010,38 @@ function BillingPage() {
     const pendingOrderId = getPendingRazorpayOrderId();
     if (!pendingOrderId) return;
 
+    // Session recovery for a payment started earlier in this tab.
+    // Opening billing must stay fast: ONE quick background check, no full-screen loader and no
+    // 10s retries. The loader is shown only if that order really was paid and we finalize it.
     let cancelled = false;
     (async () => {
+      let reconciledData;
+      try {
+        const reconcileRes = await axiosInstance.post(
+          `${bookingBasePath}/reconcile-razorpay`,
+          { razorpay_order_id: pendingOrderId },
+          {
+            withCredentials: true,
+            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+          }
+        );
+        reconciledData = reconcileRes?.data;
+      } catch (reconcileErr) {
+        if (cancelled) return;
+        // Server answered (409 = never paid, e.g. payment window closed; 404 = unknown order):
+        // forget the order so later visits don't check it again. A payment captured later is
+        // still finalized server-side by the Razorpay webhook. No response (offline): keep it.
+        if (reconcileErr?.response) clearPendingRazorpayOrderId();
+        return;
+      }
+      if (cancelled) return;
       try {
         setPostPaymentLoading(true);
-        const reconciledData = await reconcileRazorpayWithRetry({
-          orderId: pendingOrderId,
-          token: authToken,
-        });
-        if (cancelled) return;
         const finalOrderId = extractFinalOrderId(reconciledData, pendingOrderId);
         const payload = buildPaymentPayload(pendingOrderId);
         await handlePostPaymentSuccess({ finalOrderId, payload });
-      } catch (reconcileErr) {
-        if (cancelled) return;
-        const reconcileStatus = reconcileErr?.response?.status;
-        if (reconcileStatus !== 409) {
-          clearPendingRazorpayOrderId();
-        }
+      } catch (finalizeErr) {
+        console.error("Recovering earlier payment failed:", finalizeErr);
       } finally {
         if (!cancelled) setPostPaymentLoading(false);
       }
