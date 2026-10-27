@@ -139,42 +139,46 @@ describe('desktop triggers', () => {
     expect(popupShown()).toBe(true);
   });
 
-  test('close -> 24h cooldown across sessions; a new session shows again only after it', () => {
-    const view = mount('/puja/abc');
+  test('close -> short 30s pause only; after it, every exit attempt shows the popup again', () => {
+    mount('/puja/abc');
     advance(6000);
     leaveTop();
     fireEvent.click(screen.getByText('×'));
     expect(popupShown()).toBe(false);
-    view.unmount();
 
-    sessionStorage.clear(); // new tab/session
-    mount('/puja/abc');
-    advance(6000);
-    leaveTop();
+    advance(10 * 1000);
+    leaveTop(); // mouse still near the top right after closing
     expect(popupShown()).toBe(false);
 
-    advance(24 * 3600 * 1000);
+    advance(25 * 1000);
     leaveTop();
     expect(popupShown()).toBe(true);
   });
 
-  test('once per session (sessionStorage), again in a new session; legacy localStorage key is ignored', () => {
-    localStorage.setItem('exitIntentVisitShown', '1');
+  test('shows again in the same session and on every new visit (no once-per-session rule)', () => {
     const view = mount('/puja/abc');
     advance(6000);
     leaveTop();
     expect(popupShown()).toBe(true);
-    expect(localStorage.getItem('exitIntentVisitShown')).toBeNull();
-    expect(sessionStorage.getItem('exitIntentVisitShown')).toBe('1');
+    fireEvent.click(screen.getByText('×'));
     view.unmount();
 
-    mount('/puja/abc'); // same session
-    advance(6000);
+    advance(60 * 1000);
+    mount('/'); // same session, later visit to the home page
     leaveTop();
-    expect(popupShown()).toBe(false);
+    expect(popupShown()).toBe(true);
   });
 
-  test('Escape while the popup is closed does not start the 24h cooldown', () => {
+  test('an old 24h close (from the previous rule) no longer blocks the popup', () => {
+    localStorage.setItem('exitIntentClosedUntil', String(Date.now() + 20 * 3600 * 1000));
+    sessionStorage.setItem('exitIntentVisitShown', '1'); // old once-per-session flag
+    mount('/puja/abc');
+    advance(6000);
+    leaveTop();
+    expect(popupShown()).toBe(true);
+  });
+
+  test('Escape while the popup is closed does not start the close pause', () => {
     mount('/puja/abc');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(localStorage.getItem('exitIntentClosedUntil')).toBeNull();

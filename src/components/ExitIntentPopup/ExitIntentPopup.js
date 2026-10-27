@@ -23,7 +23,7 @@ export const EXIT_INTENT_ROUTES = [
 const matchRoute = (pathname) => EXIT_INTENT_ROUTES.find((r) => r.pattern.test(pathname)) || null;
 
 const MIN_DWELL_MS = 5000;
-const CLOSED_COOLDOWN_MS = 864e5; // 24h, only after an explicit close
+const CLOSED_COOLDOWN_MS = 30 * 1000; // short pause after an explicit close, so it does not reopen instantly; then it shows on every exit attempt again
 const SUBMITTED_COOLDOWN_MS = 30 * 864e5;
 const SIDE_EXIT_TOP_PX = 120; // leaving through the left/right edge this close to the top counts as exit
 const FAST_SCROLL_UP_PX_PER_MS = 1.2;
@@ -50,16 +50,17 @@ export default function ExitIntentPopup() {
   if (isBookingCompleted()) return "booking completed in this session";
   if (isExitIntentSuppressed()) return "suppressed: payment in progress";
   if (hasActivePendingBooking()) return "pending booking saved < 15 min ago";
-  if (session.get("exitIntentVisitShown")) return "already shown in this session";
   if (Number(storage.get("exitIntentSubmittedUntil")) > Date.now()) return "submitted cooldown active";
-  if (Number(storage.get("exitIntentClosedUntil")) > Date.now()) return "closed cooldown active (24h)";
+  // Values beyond the current pause come from the old 24h rule: ignore them so those visitors see the popup again.
+  const closedUntil = Number(storage.get("exitIntentClosedUntil"));
+  if (closedUntil > Date.now() && closedUntil <= Date.now() + CLOSED_COOLDOWN_MS) return `closed ${Math.ceil((closedUntil - Date.now()) / 1000)}s ago pause`;
   const dwell = Date.now() - Number(session.get("exitIntentSessionStart") || Date.now());
   if (!ignoreDwell && dwell < MIN_DWELL_MS) return `dwell ${Math.round(dwell / 100) / 10}s < ${MIN_DWELL_MS / 1000}s`;
   return null;
  }, []);
 
  const close=useCallback(()=>{storage.set("exitIntentClosedUntil",String(Date.now()+CLOSED_COOLDOWN_MS));setOpen(false)},[]);
- const show=useCallback((trigger)=>{const reason=blockedReason();if(reason){debug(`not shown (${trigger}):`,reason);return false}debug(`shown (${trigger})`);openRef.current=true;session.set("exitIntentVisitShown","1");let u={};try{u=JSON.parse(storage.get("user")||"{}")}catch{}setName(u.name||u.fullName||"");setPhone(String(u.phone||u.mobile||"").replace(/^\+?91/,""));setOpen(true);return true},[blockedReason]);
+ const show=useCallback((trigger)=>{const reason=blockedReason();if(reason){debug(`not shown (${trigger}):`,reason);return false}debug(`shown (${trigger})`);openRef.current=true;let u={};try{u=JSON.parse(storage.get("user")||"{}")}catch{}setName(u.name||u.fullName||"");setPhone(String(u.phone||u.mobile||"").replace(/^\+?91/,""));setOpen(true);return true},[blockedReason]);
 
  /** Back guard: only on the tab's first app entry (Back would leave the site) and after a user gesture (Chrome skips entries pushed without one).
   *  Mobile: every eligible page. Desktop: the home page only, so the browser Back button there shows the popup before leaving the site. */
@@ -98,7 +99,7 @@ export default function ExitIntentPopup() {
 
  // All triggers attach once; they read refs, so route changes never leave stale closures.
  useEffect(() => {
-  try { localStorage.removeItem("exitIntentVisitShown"); } catch {} // legacy: was once-per-browser-forever
+  try { localStorage.removeItem("exitIntentVisitShown"); sessionStorage.removeItem("exitIntentVisitShown"); } catch {} // legacy: once-per-browser / once-per-session rules were removed
   const onMouseOut = (e) => {
    if (e.relatedTarget || e.toElement) return; // still inside the window
    const leftTop = e.clientY <= 0;
