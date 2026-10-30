@@ -99,9 +99,14 @@ function Chadhava() {
 
   const formatEventDate = (value) => {
     if (!value) return t('chadhava.dateAnnounced');
-    const d = new Date(value);
+    const dmy = String(value).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    // DD/MM/YYYY would be misread as MM/DD by new Date(); pin date-only values to IST.
+    const d = dmy
+      ? new Date(`${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}T00:00:00+05:30`)
+      : new Date(value);
     if (!Number.isNaN(d.getTime())) {
       return d.toLocaleDateString(getDateLocale(i18n.language), {
+        timeZone: 'Asia/Kolkata',
         day: '2-digit',
         month: 'short',
         year: 'numeric',

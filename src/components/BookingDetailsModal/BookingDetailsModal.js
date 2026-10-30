@@ -66,8 +66,20 @@ function BookingDetailsModal({ bookingId, onClose }) {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
-    const parts = dateStr.split("/");
-    if (parts.length !== 3) return dateStr;
+    const text = String(dateStr);
+    if (!text.includes("/")) {
+      // ISO timestamp from the API (itemEventDate / eventDate): show the IST calendar day.
+      const iso = new Date(text);
+      if (!text.includes("T") || Number.isNaN(iso.getTime())) return text;
+      return iso.toLocaleDateString(getDateLocale(i18n.language), {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    }
+    const parts = text.split("/");
+    if (parts.length !== 3) return text;
     const [day, month, year] = parts;
     const date = new Date(year, month - 1, day);
     if (Number.isNaN(date.getTime())) return dateStr;
@@ -180,7 +192,7 @@ function BookingDetailsModal({ bookingId, onClose }) {
               {/* Puja & Date */}
               <div className="info-card">
                 <h3>📅 {t("myBookings.pujaAndDate")}</h3>
-                <p className="info-value">{formatDate(booking.date)}</p>
+                <p className="info-value">{formatDate(booking.itemEventDate || booking.eventDate || booking.date)}</p>
                 <p className="info-label">
                   {translateText(booking.bookingSnapshot?.puja?.templeName, "templeName") ||
                     booking.bookingSnapshot?.puja?.location}

@@ -161,6 +161,7 @@ function MyBookings() {
     }
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? dateStr : date.toLocaleDateString(getDateLocale(i18n.language), {
+      ...(String(dateStr).includes("T") ? { timeZone: "Asia/Kolkata" } : {}),
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -183,7 +184,8 @@ function MyBookings() {
       packageName: (selectedPkg?.name
         ? localizePackageName(selectedPkg.name, t, i18n.language, (name) => translateCmsText(name, i18n.language))
         : translateCmsText(categoryName, i18n.language)) ?? t("myBookings.notAvailable"),
-      date: b.date,
+      // Puja/chadhava date as booked (API snapshot), not `date`, which on older bookings is the day it was made.
+      date: b.itemEventDate || b.eventDate || b.date,
       slotStart: b.slots?.[0]?.start,
       duration: b.duration ?? selectedPkg?.duration ?? "—",
       price: b.price ?? b.bookingSnapshot?.grandTotal ?? b.grandTotal ?? b.payment?.amount ?? 0,
