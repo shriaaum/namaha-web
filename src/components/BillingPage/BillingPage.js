@@ -20,6 +20,7 @@ const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 const CHADHAVA_PRASADAM_PRICE = 250;
 const DAKSHINA_OPTIONS = [51, 101, 251, 501];
 const MAX_DAKSHINA_AMOUNT = 100000;
+const MAX_TEMPLE_PRASADAM_QTY = 10;
 
 function BillingPage() {
   const { t, i18n } = useTranslation();
@@ -190,6 +191,45 @@ function BillingPage() {
     [isChadhavaFlow, prasadam]
   );
 
+  /* Temple Prasadam: products set per puja in the admin. They are paid in the same
+     payment as the puja (the server re-prices them) and shipped to the devotee. */
+  const templePrasadamCatalog = useMemo(
+    () =>
+      isChadhavaFlow || !Array.isArray(puja?.templePrasadams)
+        ? []
+        : puja.templePrasadams.filter((item) => item && item.id && item.name),
+    [isChadhavaFlow, puja?.templePrasadams]
+  );
+  const [templePrasadamQty, setTemplePrasadamQty] = useState(() => location.state?.templePrasadamQty || {});
+  const setTemplePrasadamQuantity = useCallback((itemId, quantity) => {
+    setTemplePrasadamQty((prev) => {
+      const next = { ...prev };
+      const clamped = Math.max(0, Math.min(MAX_TEMPLE_PRASADAM_QTY, Number(quantity) || 0));
+      if (clamped > 0) next[String(itemId)] = clamped;
+      else delete next[String(itemId)];
+      return next;
+    });
+  }, []);
+  const resolvedTemplePrasadams = useMemo(
+    () =>
+      templePrasadamCatalog
+        .map((item) => {
+          const quantity = templePrasadamQty[String(item.id)] || 0;
+          if (quantity <= 0) return null;
+          const price = Number(item.price) || 0;
+          // English name is saved in the booking; the card shows getTemplePrasadamDisplayName().
+          return { id: String(item.id), name: item.nameEn || item.name, price, quantity, total: price * quantity };
+        })
+        .filter(Boolean),
+    [templePrasadamCatalog, templePrasadamQty]
+  );
+  const templePrasadamTotal = useMemo(
+    () => resolvedTemplePrasadams.reduce((sum, item) => sum + item.total, 0),
+    [resolvedTemplePrasadams]
+  );
+  // A delivery address is needed for the free prasadam box and for any Temple Prasadam.
+  const needsDeliveryAddress = Boolean(prasadam) || resolvedTemplePrasadams.length > 0;
+
   const subtotal = useMemo(() => {
     if (isChadhavaFlow) {
       const base = passedGrandTotal > 0 ? passedGrandTotal : packagePrice + computedAddonsTotal;
@@ -230,6 +270,8 @@ function BillingPage() {
       })
     );
   }, [puja?.id, puja?.addOns, i18n.language, translateText]);
+  const getTemplePrasadamDisplayName = (item) =>
+    item?.name && item.name !== item.nameEn ? item.name : translateText(item?.nameEn || item?.name);
   const getAddonDisplayName = (addon, index) =>
     isChadhavaFlow
       ? translateText(addon?.name)
@@ -277,9 +319,9 @@ function BillingPage() {
 
   const couponApplied = appliedCoupon != null;
   const isSpecialCouponApplied = couponApplied && Boolean(appliedCoupon?.specialCoupon);
-  // Coupons apply only to booking charges; Dakshina is always a separate voluntary amount.
+  // Coupons apply only to booking charges; Temple Prasadam and Dakshina are added after any discount.
   const bookingPayable = couponApplied ? finalAmount : Math.max(subtotal, 0);
-  const finalPayable = bookingPayable + dakshinaAmount;
+  const finalPayable = bookingPayable + templePrasadamTotal + dakshinaAmount;
 
   useEffect(() => {
     if (isSpecialCouponApplied && prasadam) setPrasadam(false);
@@ -411,14 +453,14 @@ function BillingPage() {
     name: form.name,
     email: form.email,
     phone: form.phone,
-    ...(prasadam && {
+    ...(needsDeliveryAddress && {
       streetAddress: form.streetAddress,
       city: form.city,
       state: form.state,
       pincode: form.pincode,
       address: composedAddress,
     }),
-  }), [form, composedAddress, prasadam]);
+  }), [form, composedAddress, needsDeliveryAddress]);
 
   // ================= PARTICIPANTS =================
   const [participants, setParticipants] = useState(
@@ -480,7 +522,7 @@ function BillingPage() {
     []
   );
   const addressBook = useSavedAddresses({
-    enabled: isLoggedInDevotee && Boolean(prasadam),
+    enabled: isLoggedInDevotee && needsDeliveryAddress,
     form,
     onFill: fillAddress,
   });
@@ -503,7 +545,7 @@ function BillingPage() {
     if (!devoteeName || !form.phone) {
       return false;
     }
-    if (prasadam && (
+    if (needsDeliveryAddress && (
       !form.streetAddress?.trim() ||
       !form.city?.trim() ||
       !form.state?.trim() ||
@@ -521,7 +563,7 @@ function BillingPage() {
     form.city,
     form.state,
     form.pincode,
-    prasadam,
+    needsDeliveryAddress,
     participants,
     puja?.id,
     puja?._id
@@ -544,6 +586,7 @@ function BillingPage() {
       address: composedAddress,
       participants,
       prasadam,
+      templePrasadams: resolvedTemplePrasadams.map((item) => [item.id, item.quantity]),
       couponCode: appliedCoupon?.code || coupon?.code || null,
       discountAmount: couponApplied ? discountAmount : 0,
       selectedPackageId: selectedPackage?.id || selectedPackage?._id || null,
@@ -578,6 +621,8 @@ function BillingPage() {
         dakshinaAmount,
         prasadam,
         prasadamAmount,
+        templePrasadams: resolvedTemplePrasadams,
+        templePrasadamTotal,
       };
       pendingSaveInFlightRef.current = true;
       const req = axiosInstance
@@ -637,6 +682,8 @@ function BillingPage() {
     resolvedAddons,
     prasadam,
     prasadamAmount,
+    resolvedTemplePrasadams,
+    templePrasadamTotal,
     bookingBasePath,
     authToken,
     composedAddress,
@@ -687,8 +734,8 @@ function BillingPage() {
       }
     }
 
-    // Delivery address is required only when the customer has selected Prasadam.
-    if (!form.phone || (prasadam && (
+    // Delivery address is required only when something will be shipped (Prasadam / Temple Prasadam).
+    if (!form.phone || (needsDeliveryAddress && (
       !form.streetAddress?.trim() ||
       !form.city?.trim() ||
       !form.state?.trim() ||
@@ -705,13 +752,13 @@ function BillingPage() {
       paymentStartedRef.current = false;
       return;
     }
-    if (prasadam && !/^\d{6}$/.test(String(form.pincode || ""))) {
+    if (needsDeliveryAddress && !/^\d{6}$/.test(String(form.pincode || ""))) {
       showToast(t("billing.errPincode"));
       paymentStartedRef.current = false;
       return;
     }
     // Address is valid: remember it for the user's next booking (best-effort, non-blocking).
-    if (prasadam) addressBook.saveCurrent();
+    if (needsDeliveryAddress) addressBook.saveCurrent();
 
     // Email: if provided, must contain "@" in a basic valid pattern
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
@@ -779,6 +826,8 @@ function BillingPage() {
 
         prasadam,
         prasadamAmount,
+        templePrasadams: resolvedTemplePrasadams,
+        templePrasadamTotal,
       };
 
       const res = await axiosInstance.post(bookingBasePath, payload, {
@@ -892,7 +941,7 @@ function BillingPage() {
       name: form.name?.trim() || participants[0]?.name?.trim() || "",
       email: form.email || "",
       phone: form.phone,
-      ...(prasadam && { address: composedAddress }),
+      ...(needsDeliveryAddress && { address: composedAddress }),
     },
     participants: participants.map((p) => ({
       name: p.name || "",
@@ -918,6 +967,8 @@ function BillingPage() {
     dakshinaAmount,
     prasadam,
     prasadamAmount,
+    templePrasadams: resolvedTemplePrasadams,
+    templePrasadamTotal,
   });
 
   const handlePostPaymentSuccess = async ({ finalOrderId, payload }) => {
@@ -967,6 +1018,8 @@ function BillingPage() {
       addonsTotal: computedAddonsTotal,
       prasadam,
       prasadamAmount,
+      templePrasadams: resolvedTemplePrasadams,
+      templePrasadamTotal,
       dakshinaAmount,
       coupon: payload.coupon,
       couponCode: payload.couponCode,
@@ -1266,6 +1319,7 @@ function BillingPage() {
       addons,
       prasadam,
       prasadamAmount,
+      templePrasadams,
       coupon,
       couponCode,
       discountAmount,
@@ -1290,6 +1344,13 @@ function BillingPage() {
       prasadam && (prasadamAmount || 0) > 0
         ? `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${t("invoice.prasadam")}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">1</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${prasadamAmount}</td></tr>`
         : "";
+
+    const templePrasadamRows = (Array.isArray(templePrasadams) ? templePrasadams : [])
+      .map(
+        (p) =>
+          `<tr><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${t("invoice.templePrasadam")}: ${translateText(p.name) || "-"}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:center;">${p.quantity || 1}</td><td style="padding:8px 12px; border-bottom:1px solid #e5e7eb; text-align:right;">₹${p.total || p.price || 0}</td></tr>`
+      )
+      .join("");
 
     const dakshinaRow =
       Number(dakshinaAmount) > 0
@@ -1380,6 +1441,7 @@ function BillingPage() {
                   ${pkgRow}
                   ${addonsRows}
                   ${prasadamRow}
+                  ${templePrasadamRows}
                   ${dakshinaRow}
                   ${couponRow}
                 </tbody>
@@ -1499,6 +1561,9 @@ function BillingPage() {
             {invoiceData.prasadam && invoiceData.prasadamAmount > 0 && (
               <p><strong>{t("billing.prasadam")}:</strong> ₹{invoiceData.prasadamAmount}</p>
             )}
+            {invoiceData.templePrasadamTotal > 0 && (
+              <p><strong>{t("billing.templePrasadamTotal")}:</strong> ₹{invoiceData.templePrasadamTotal}</p>
+            )}
             {invoiceData.dakshinaAmount > 0 && (
               <p><strong>{t("dakshina.title")}:</strong> ₹{invoiceData.dakshinaAmount}</p>
             )}
@@ -1547,6 +1612,70 @@ function BillingPage() {
               {t("billing.completeBookingText")}
             </p>
           </div>
+          {/* TEMPLE PRASADAM: separate card under the booking message; added items join this same payment */}
+          {templePrasadamCatalog.length > 0 && (
+            <div className="billing-tp-section">
+              <p className="billing-tp-title">{t("billing.templePrasadamTitle")}</p>
+              <p className="billing-tp-hint">{t("billing.templePrasadamHint")}</p>
+              <div className="billing-tp-list">
+                {templePrasadamCatalog.map((item) => {
+                  const itemId = String(item.id);
+                  const qty = templePrasadamQty[itemId] || 0;
+                  const label = getTemplePrasadamDisplayName(item);
+                  return (
+                    <div key={itemId} className={`billing-tp-card${qty > 0 ? " is-added" : ""}`}>
+                      <div className="billing-tp-media">
+                        {item.image ? (
+                          <img src={item.image} alt={label} loading="lazy" />
+                        ) : (
+                          <span aria-hidden="true">🪔</span>
+                        )}
+                      </div>
+                      <div className="billing-tp-body">
+                        <div className="billing-tp-info">
+                          <span className="billing-tp-name" title={label}>{label}</span>
+                          <span className="billing-tp-price">₹{item.price}</span>
+                        </div>
+                        {qty === 0 ? (
+                          <button
+                            type="button"
+                            className="billing-tp-add-btn"
+                            onClick={() => setTemplePrasadamQuantity(itemId, 1)}
+                          >
+                            {t("billing.templePrasadamAdd")}
+                          </button>
+                        ) : (
+                          <div className="billing-tp-added">
+                            <span className="billing-tp-added-note">✓ {t("billing.templePrasadamAdded")}</span>
+                            <div className="billing-addon-qty">
+                              <button
+                                type="button"
+                                className="billing-qty-btn"
+                                onClick={() => setTemplePrasadamQuantity(itemId, qty - 1)}
+                                aria-label={t("billing.decreaseQuantity")}
+                              >
+                                −
+                              </button>
+                              <span className="billing-qty-val">{qty}</span>
+                              <button
+                                type="button"
+                                className="billing-qty-btn"
+                                onClick={() => setTemplePrasadamQuantity(itemId, qty + 1)}
+                                disabled={qty >= MAX_TEMPLE_PRASADAM_QTY}
+                                aria-label={t("billing.increaseQuantity")}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1726,6 +1855,13 @@ function BillingPage() {
             </div>
           )}
 
+          {templePrasadamTotal > 0 && (
+            <div className="addons-total-row">
+              <span className="addons-total-label">{t("billing.templePrasadamTotal")}:</span>
+              <span className="addons-total-price">₹{templePrasadamTotal}</span>
+            </div>
+          )}
+
           {dakshinaAmount > 0 && (
             <div className="addons-total-row">
               <span className="addons-total-label">{t("dakshina.title")}:</span>
@@ -1805,7 +1941,8 @@ function BillingPage() {
             maxLength={10}
             pattern="\d{10}"
           />
-          {prasadam && <>
+          {needsDeliveryAddress && <>
+            {!prasadam && <p className="billing-tp-address-note">{t("billing.templePrasadamAddress")}</p>}
             {isLoggedInDevotee && <SavedAddresses book={addressBook} />}
             <input
               name="streetAddress"

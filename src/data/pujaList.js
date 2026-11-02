@@ -297,6 +297,7 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   // English source kept for booking payloads/invoices (`titleEn`, add-on `nameEn`).
   const source = apiPuja;
   const englishAddonNames = new Map((source.addOns || []).map((a) => [String(a._id), a.name]));
+  const englishTemplePrasadamNames = new Map((source.templePrasadams || []).map((p) => [String(p._id), p.name]));
   // Reviewed local translations first; CMS `translations` (when the API sends them) override.
   apiPuja = localizePooja(apiPuja, i18n.language);
   reportMissingTranslations("pooja", source, apiPuja, ["name", "description", "templeName", "templeDescription", "aboutPuja", "duration"], i18n.language);
@@ -359,7 +360,12 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
   // Hindi/Telugu for the English names Billing receives (live language switch there).
   textTranslations: buildTextTranslations(
     source,
-    [source.name, ...(source.addOns || []).map((a) => a.name), ...(source.packageDetails || []).map((p) => p.name)],
+    [
+      source.name,
+      ...(source.addOns || []).map((a) => a.name),
+      ...(source.templePrasadams || []).map((p) => p.name),
+      ...(source.packageDetails || []).map((p) => p.name),
+    ],
     localizePooja
   ),
   location:
@@ -375,6 +381,17 @@ const mapApiPujaToPUJA_LIST = (apiPuja) => {
       price: `₹${addon.price}`,
       id: addon._id,
     })) || [],
+  // Temple Prasadam (set per puja in the admin). `nameEn` goes into the booking; `name` is for display.
+  templePrasadams:
+    apiPuja.templePrasadams
+      ?.filter((item) => item?._id && item?.name)
+      .map((item) => ({
+        id: String(item._id),
+        name: item.name,
+        nameEn: englishTemplePrasadamNames.get(String(item._id)) || item.name,
+        price: Number(item.price) || 0,
+        image: item.image || item.imageUrl || null,
+      })) || [],
   // Package `name` stays English: it goes into the booking payload/snapshot.
   // Localized labels are display-only, looked up by package id.
   packageDetails:
