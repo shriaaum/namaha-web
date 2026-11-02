@@ -193,13 +193,53 @@ function BillingPage() {
 
   /* Temple Prasadam: products set per puja in the admin. They are paid in the same
      payment as the puja (the server re-prices them) and shipped to the devotee. */
-  const templePrasadamCatalog = useMemo(
-    () =>
-      isChadhavaFlow || !Array.isArray(puja?.templePrasadams)
-        ? []
-        : puja.templePrasadams.filter((item) => item && item.id && item.name),
-    [isChadhavaFlow, puja?.templePrasadams]
-  );
+  // Navigation state survives a refresh, so it can hold prasadams the admin has since
+  // removed. Reload this puja's current list from the API and prefer it once it arrives.
+  const pujaRecordId = puja?._id || puja?.id;
+  const [freshTemplePrasadams, setFreshTemplePrasadams] = useState(null);
+  useEffect(() => {
+    if (isChadhavaFlow || !pujaRecordId) return undefined;
+    let cancelled = false;
+    axiosInstance
+      .get(`/pooja/${encodeURIComponent(pujaRecordId)}`)
+      .then((res) => {
+        const record = res.data?.pooja;
+        if (cancelled || !record) return;
+        // A server without Temple Prasadam support returns no list: show none rather than
+        // offering items the server would not charge for.
+        const list = Array.isArray(record.templePrasadams) ? record.templePrasadams : [];
+        setFreshTemplePrasadams(
+          list
+            .filter((item) => item?._id && item?.name)
+            .map((item) => ({
+              id: String(item._id),
+              name: item.name,
+              nameEn: item.name,
+              price: Number(item.price) || 0,
+              image: item.image || item.imageUrl || null,
+            }))
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isChadhavaFlow, pujaRecordId]);
+
+  const templePrasadamCatalog = useMemo(() => {
+    if (isChadhavaFlow) return [];
+    const fromState = Array.isArray(puja?.templePrasadams)
+      ? puja.templePrasadams.filter((item) => item && item.id && item.name)
+      : [];
+    if (!freshTemplePrasadams) return fromState;
+    // Keep the already-localized display name from the puja page when the item (and its
+    // English name) is unchanged; a renamed item shows its new name.
+    const stateById = new Map(fromState.map((item) => [String(item.id), item]));
+    return freshTemplePrasadams.map((item) => {
+      const previous = stateById.get(item.id);
+      return previous && (previous.nameEn || previous.name) === item.nameEn ? { ...item, name: previous.name } : item;
+    });
+  }, [isChadhavaFlow, puja?.templePrasadams, freshTemplePrasadams]);
   const [templePrasadamQty, setTemplePrasadamQty] = useState(() => location.state?.templePrasadamQty || {});
   const setTemplePrasadamQuantity = useCallback((itemId, quantity) => {
     setTemplePrasadamQty((prev) => {
