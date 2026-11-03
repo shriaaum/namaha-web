@@ -48,15 +48,25 @@ export function withDisplayText(product, language) {
 /**
  * "Buy Prasadam" card shown on the home page and on puja / chadhava detail pages.
  * @param {"home"|"puja"|"chadhava"} source where the card is shown (stored with the order)
+ * @param {boolean} isSelected whether the prasadam is currently added to the page's cart
+ * @param {() => void} onToggle called when clicking buy/remove in in-page cart mode
+ * @param {boolean} disabled whether adding is blocked
  */
-export default function PrasadamCard({ source = "home" }) {
+export default function PrasadamCard({
+  source = "home",
+  isSelected = false,
+  onToggle,
+  disabled = false,
+}) {
   const { t } = useTranslation();
   const product = usePrasadamProduct();
   if (!product || !product.isActive) return null;
 
+  const isInPageCart = source === "chadhava" || typeof onToggle === "function";
+
   return (
     <section className={`prs-card-section prs-card-section--${source}`}>
-      <div className="prs-card">
+      <div className={`prs-card ${isSelected ? "prs-card--selected" : ""}`}>
         <div className="prs-card-media">
           {product.imageUrl ? <img src={product.imageUrl} alt={product.displayName} loading="lazy" /> : <span aria-hidden="true">🍬</span>}
         </div>
@@ -64,10 +74,26 @@ export default function PrasadamCard({ source = "home" }) {
           <h3>{product.displayName}</h3>
           <p className="prs-card-desc">{product.displayDescription}</p>
           <div className="prs-card-foot">
-            <span className="prs-card-price">₹{product.price}</span>
-            <Link className="prs-card-btn" to={`/prasadam?from=${source}`}>
-              {t("prasadamShop.buyNow")}
-            </Link>
+            <div className="prs-card-pricing">
+              <span className="prs-card-price">₹{product.price}</span>
+              {isSelected && (
+                <span className="prs-card-badge">✓ {t("common.added", "Added")}</span>
+              )}
+            </div>
+            {isInPageCart ? (
+              <button
+                type="button"
+                className={`prs-card-btn ${isSelected ? "prs-card-btn--selected" : ""}`}
+                disabled={disabled}
+                onClick={onToggle}
+              >
+                {isSelected ? t("billing.remove", "Remove") : t("prasadamShop.buyNow")}
+              </button>
+            ) : (
+              <Link className="prs-card-btn" to={`/prasadam?from=${source}`}>
+                {t("prasadamShop.buyNow")}
+              </Link>
+            )}
           </div>
         </div>
       </div>

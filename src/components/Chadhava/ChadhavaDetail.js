@@ -9,7 +9,7 @@ import { buildTextTranslations, getDateLocale, reportMissingTranslations } from 
 import './ChadhavaDetail.css';
 import Footer from '../Footer/Footer';
 import ReviewsFeedback from '../Reviews/ReviewsFeedback';
-import PrasadamCard from '../Prasadam/PrasadamCard';
+import PrasadamCard, { usePrasadamProduct } from '../Prasadam/PrasadamCard';
 import { optimizedImage, optimizedSrcSet } from '../../lib/img';
 import { setExitIntentContext } from '../../lib/exitIntentContext';
 import { addToCart } from '../../lib/cart';
@@ -135,7 +135,10 @@ function ChadhavaDetail() {
   const { t, i18n } = useTranslation();
   const [activeFaq, setActiveFaq] = useState(null);
   const [cart, setCart] = useState({});
+  const [includePrasadam, setIncludePrasadam] = useState(false);
   const [cartToast, setCartToast] = useState(false);
+  const prasadamProduct = usePrasadamProduct();
+  const prasadamPrice = Number(prasadamProduct?.price) || 250;
   // True once the cart was restored or defaulted for the loaded chadhava.
   const [cartReady, setCartReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -247,6 +250,7 @@ function ChadhavaDetail() {
         setLoading(true);
         setCartReady(false);
         setCart({});
+        setIncludePrasadam(false);
         const res = await axiosInstance.get(`/chadhava/${encodeURIComponent(id)}`);
         const item = res?.data?.item || res?.data?.data?.item || res?.data?.data || res?.data;
         if (!mounted) return;
@@ -286,7 +290,10 @@ function ChadhavaDetail() {
   }, [detail, aboutVisibleLines]);
 
   useEffect(() => {
-    if (isBookingBlocked) setCart({});
+    if (isBookingBlocked) {
+      setCart({});
+      setIncludePrasadam(false);
+    }
   }, [isBookingBlocked]);
 
   const cartStorageKey = `${CART_STORAGE_PREFIX}${detail?._id || detail?.id || id}`;
@@ -330,6 +337,7 @@ function ChadhavaDetail() {
         if (validKeys.has(key) && n > 0) restored[key] = n;
       });
       setCart(restored);
+      if (saved.includePrasadam) setIncludePrasadam(true);
     } else if (firstAvailableIndex >= 0) {
       setCart({ [offeringKey(offerings[firstAvailableIndex], firstAvailableIndex)]: 1 });
     }
@@ -340,11 +348,11 @@ function ChadhavaDetail() {
   useEffect(() => {
     if (!cartReady || isBookingBlocked) return;
     try {
-      sessionStorage.setItem(cartStorageKey, JSON.stringify({ cart }));
+      sessionStorage.setItem(cartStorageKey, JSON.stringify({ cart, includePrasadam }));
     } catch {
       // storage unavailable (private mode): selection just won't survive navigation
     }
-  }, [cart, cartReady, isBookingBlocked, cartStorageKey]);
+  }, [cart, includePrasadam, cartReady, isBookingBlocked, cartStorageKey]);
 
   useEffect(() => {
     if (!cartReady || !detail || isBookingBlocked || relatedPujaRequestRef.current) return;
@@ -498,12 +506,29 @@ function ChadhavaDetail() {
     });
   };
 
-  const getTotalItems = () => Object.values(cart).reduce((sum, count) => sum + count, 0);
+  const togglePrasadam = () => {
+    if (isBookingBlocked) return;
+    setIncludePrasadam((prev) => {
+      const next = !prev;
+      if (next && firstAvailableIndex >= 0) {
+        setCart((prevCart) => {
+          const count = Object.values(prevCart).reduce((sum, c) => sum + Number(c || 0), 0);
+          if (count === 0) {
+            return { [offeringKey(offerings[firstAvailableIndex], firstAvailableIndex)]: 1 };
+          }
+          return prevCart;
+        });
+      }
+      return next;
+    });
+  };
+
+  const getTotalItems = () => Object.values(cart).reduce((sum, count) => sum + count, 0) + (includePrasadam ? 1 : 0);
   const getTotalPrice = () => 
     Object.entries(cart).reduce((total, [offeringId, count]) => {
       const offering = offerings.find((o, i) => String(o._id || o.id || i) === String(offeringId));
       return total + ((Number(offering?.price) || 0) * count || 0);
-    }, 0);
+    }, 0) + (includePrasadam ? prasadamPrice : 0);
 
   const handleBuyNow = () => {
     if (isBookingBlocked || getTotalItems() === 0) return;
@@ -548,6 +573,7 @@ function ChadhavaDetail() {
       addons: selectedOfferings,
       addonsTotal: 0,
       grandTotal: total,
+      prasadam: Boolean(includePrasadam),
       mode: 'chadhava',
       // Display-only Hindi/Telugu for the English names above (not sent with the booking).
       textTranslations: buildTextTranslations(
@@ -572,6 +598,7 @@ function ChadhavaDetail() {
       addons: Object.entries(cart)
         .filter(([, qty]) => qty > 0)
         .map(([offeringId, qty]) => ({ id: offeringId, quantity: qty })),
+      prasadam: Boolean(includePrasadam),
       title: detail?.title || 'Chadhava',
       image: detail?.bannerImage || null,
     });
@@ -781,7 +808,7 @@ function ChadhavaDetail() {
             )}
           </section>
 
-          <PrasadamCard source="chadhava" />
+          <PrasadamCard source="chadhava" isSelected={includePrasadam} onToggle={togglePrasadam} disabled={isBookingBlocked} />
 
           <section
             className="chd-temple-benefits chd-section"

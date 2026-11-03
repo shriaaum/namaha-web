@@ -34,6 +34,7 @@ const toRequestLine = (line, participants) => ({
   itemId: line.itemId,
   packageId: line.packageId,
   addons: line.addons || [],
+  prasadam: Boolean(line.prasadam),
   couponCode: line.couponCode || "",
   ...(participants ? { participants } : {}),
 });
