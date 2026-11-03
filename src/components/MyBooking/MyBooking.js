@@ -171,16 +171,18 @@ function MyBookings() {
   const getBookingDisplayData = (b) => {
     const pooja = b.poojaId ?? b.pooja;
     const pujaObj = typeof pooja === "object" ? pooja : null;
+    const snapPuja = b.bookingSnapshot?.puja;
+    const bookedName = [b.itemName, snapPuja?.title, snapPuja?.name, pujaObj?.name, pujaObj?.title]
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .find(Boolean) || "";
     const selectedPkg = b.bookingSnapshot?.selectedPackage ?? b.selectedPackage ?? b.package;
     const category = pujaObj?.category;
     const categoryName = typeof category === "object" ? category?.category ?? category?.name : null;
     return {
       id: b._id ?? b.id,
-      name: pujaObj?.title
-        ? translateBookedText(pujaObj.title, pujaObj, "title", i18n.language)
-        : pujaObj?.name
-          ? translateBookedText(pujaObj.name, pujaObj, "name", i18n.language)
-          : t("myBookings.fallbackTitle"),
+      name: bookedName
+        ? translateBookedText(bookedName, pujaObj, "name", i18n.language)
+        : t("myBookings.fallbackTitle"),
       packageName: (selectedPkg?.name
         ? localizePackageName(selectedPkg.name, t, i18n.language, (name) => translateCmsText(name, i18n.language))
         : translateCmsText(categoryName, i18n.language)) ?? t("myBookings.notAvailable"),

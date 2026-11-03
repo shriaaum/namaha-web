@@ -241,8 +241,10 @@ describe('booked items (My Bookings)', () => {
   test('use the linked record translation while its English still matches', () => {
     expect(translateBookedText(newPooja.name, newPooja, 'name', 'hi')).toBe('कार्तिक पूर्णिमा विशेष: गंगा दीपदान पूजा');
     expect(translateBookedText(newPooja.templeName, newPooja, 'templeName', 'te')).toBe('దశాశ్వమేధ ఘాట్, వారణాసి');
-    // A booking made under an older English name is not given the new record's text.
+    // A booking made under an older English name is not given the new record's text,
+    // including when the API has overlaid that old name onto the linked puja.
     expect(translateBookedText('Old Puja Name', newPooja, 'name', 'hi')).toBe('Old Puja Name');
+    expect(translateBookedText('Old Puja Name', { ...newPooja, name: 'Old Puja Name', liveName: newPooja.name }, 'name', 'hi')).toBe('Old Puja Name');
     expect(translateBookedText(newPooja.name, newPooja, 'name', 'en')).toBe(newPooja.name);
   });
 });

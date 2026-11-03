@@ -125,6 +125,10 @@ function BookingDetailsModal({ bookingId, onClose }) {
     ? t(STATUS_KEYS[booking.status])
     : booking?.status?.charAt(0).toUpperCase() + booking?.status?.slice(1) || "";
   const linkedPooja = booking?.poojaId && typeof booking.poojaId === "object" ? booking.poojaId : booking?.pooja;
+  const snapPuja = booking?.bookingSnapshot?.puja;
+  const bookedName = [booking?.itemName, snapPuja?.title, snapPuja?.name, booking?.pooja?.name, booking?.pooja?.title, linkedPooja?.name, linkedPooja?.title]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .find(Boolean) || "";
   const translateText = (english, field = "name") => translateBookedText(english, linkedPooja, field, i18n.language);
   const modeText = (mode) => (MODE_KEYS[mode] ? t(MODE_KEYS[mode]) : mode);
 
@@ -168,10 +172,7 @@ function BookingDetailsModal({ bookingId, onClose }) {
             {/* Header */}
             <div className="modal-header">
               <h2>
-                {translateText(booking.bookingSnapshot?.puja?.title) ||
-                  translateText(booking.pooja?.name) ||
-                  translateText(booking.pooja?.title, "title") ||
-                  t("myBookings.fallbackTitle")}
+                {translateText(bookedName) || t("myBookings.fallbackTitle")}
               </h2>
               <span 
                 className="modal-status-badge"

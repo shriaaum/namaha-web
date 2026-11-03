@@ -35,6 +35,15 @@ export function translateCmsText(text, language) {
  */
 export function translateBookedText(english, record, field, language) {
   if (typeof english !== 'string' || !english.trim() || language === 'en') return english;
+  const booked = english.trim();
+  const liveName = typeof record?.liveName === 'string' ? record.liveName.trim() : '';
+  const translatedFrom = record?.translations?.meta?.source?.[field];
+  const sourceEnglish = typeof translatedFrom === 'string' ? translatedFrom.trim() : '';
+  // The linked puja may have been renamed. Its current translations belong to the
+  // new name, so a completed booking keeps the name it was booked under.
+  if ((liveName && liveName !== booked) || (sourceEnglish && sourceEnglish !== booked)) {
+    return translateCmsText(english, language);
+  }
   if (record && typeof record === 'object' && record[field] === english) {
     const localized = localizeRecord(localizePujaRecord(record, language), language)?.[field];
     if (localized && localized !== english) return localized;
